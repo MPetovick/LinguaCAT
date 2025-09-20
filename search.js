@@ -8,7 +8,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://dlc.iec.cat/results.asp?txtEntrada=${encodeURIComponent(word)}`;
+    // URL directa a l’entrada
+    const url = `https://dlc.iec.cat/entrada/${encodeURIComponent(word)}`;
     const response = await fetch(url);
     const html = await response.text();
     const $ = cheerio.load(html);
@@ -18,38 +19,27 @@ export default async function handler(req, res) {
       phonetic: "",
       grammatical: "",
       definitions: [],
-      examples: [],
-      synonyms: [],
-      antonyms: []
+      examples: []
     };
 
-    const wordTitle = $(".entry .lemma").first().text().trim();
-    if (wordTitle) data.word = wordTitle;
+    // Lema (nom de l’entrada)
+    const lema = $(".df .dfh").first().text().trim();
+    if (lema) data.word = lema;
 
-    const gram = $(".entry .gramcat").first().text().trim();
+    // Categoria gramatical
+    const gram = $(".df .ps").first().text().trim();
     if (gram) data.grammatical = gram;
 
-    const phon = $(".entry .phon").first().text().trim();
-    if (phon) data.phonetic = phon;
-
-    $(".entry .definition").each((_, el) => {
+    // Definicions
+    $(".df .d").each((_, el) => {
       const def = $(el).text().replace(/\s+/g, " ").trim();
       if (def) data.definitions.push(def);
     });
 
-    $(".entry .example").each((_, el) => {
+    // Exemples
+    $(".ex").each((_, el) => {
       const ex = $(el).text().replace(/\s+/g, " ").trim();
       if (ex) data.examples.push(ex);
-    });
-
-    $(".entry .synonyms a").each((_, el) => {
-      const syn = $(el).text().trim();
-      if (syn) data.synonyms.push(syn);
-    });
-
-    $(".entry .antonyms a").each((_, el) => {
-      const ant = $(el).text().trim();
-      if (ant) data.antonyms.push(ant);
     });
 
     if (data.definitions.length === 0) {
