@@ -1,0 +1,11 @@
+{
+  "name": "linguacat",
+  "version": "1.0.0",
+  "description": "Diccionari català amb scraping del IEC desplegable a Vercel",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^3.3.2"
+  }
+}
