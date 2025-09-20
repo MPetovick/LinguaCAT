@@ -1,4 +1,3 @@
-// api/search.js
 import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 
@@ -24,37 +23,30 @@ export default async function handler(req, res) {
       antonyms: []
     };
 
-    // Lemma
     const wordTitle = $(".entry .lemma").first().text().trim();
     if (wordTitle) data.word = wordTitle;
 
-    // Categoria gramatical
     const gram = $(".entry .gramcat").first().text().trim();
     if (gram) data.grammatical = gram;
 
-    // Fonètica
     const phon = $(".entry .phon").first().text().trim();
     if (phon) data.phonetic = phon;
 
-    // Definicions
     $(".entry .definition").each((_, el) => {
       const def = $(el).text().replace(/\s+/g, " ").trim();
       if (def) data.definitions.push(def);
     });
 
-    // Exemples
     $(".entry .example").each((_, el) => {
       const ex = $(el).text().replace(/\s+/g, " ").trim();
       if (ex) data.examples.push(ex);
     });
 
-    // Sinònims
     $(".entry .synonyms a").each((_, el) => {
       const syn = $(el).text().trim();
       if (syn) data.synonyms.push(syn);
     });
 
-    // Antònims
     $(".entry .antonyms a").each((_, el) => {
       const ant = $(el).text().trim();
       if (ant) data.antonyms.push(ant);
