@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+
+    <!-- Página principal -->
+    <url>
+        <loc>https://hushbox.online/</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- Favicon -->
+    <url>
+        <loc>https://hushbox.online/assets/favicon.ico</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.1</priority>
+    </url>
+
+      <!-- Favicon PNG -->
+    <url>
+        <loc>https://hushbox.online/assets/favicon.png</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.1</priority>
+    </url>
+
+    <!-- Apple touch icon de 180x180 -->
+    <url>
+        <loc>https://hushbox.online/assets/apple-touch-icon-180x180.png</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.1</priority>
+    </url>
+
+    <!-- Apple touch icon de 152x152 -->
+    <url>
+        <loc>https://hushbox.online/assets/apple-touch-icon-152x152.png</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.1</priority>
+    </url>
+
+    <!-- Apple touch icon de 120x120 -->
+    <url>
+        <loc>https://hushbox.online/assets/apple-touch-icon-120x120.png</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.1</priority>
+    </url>
+
+    <!-- Estilo principal de la web -->
+    <url>
+        <loc>https://hushbox.online/styles.css</loc>
+        <lastmod>2025-03-11T09:17:15+00:00</lastmod>
+        <priority>0.2</priority>
+    </url>
+</urlset>

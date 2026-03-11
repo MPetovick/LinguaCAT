@@ -1,3450 +1,476 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autonomus Avatar v5.0</title>
-    <style>
-        /* ===== SISTEMA DE DISEÑO ===== */
-        :root {
-            /* Colores principales */
-            --color-primary: #00ff88;
-            --color-secondary: #0088ff;
-            --color-danger: #ff4444;
-            --color-warning: #ffaa00;
-            --color-success: #00cc66;
-            --color-info: #00aaff;
-            --color-muted: #666666;
-            --color-legendary: #ff00ff;
-            --color-gold: #ffd700;
-            --color-purple: #9d4edd;
-            
-            /* Escala de grises terminal */
-            --color-bg-0: #000000;
-            --color-bg-1: #0a0a0a;
-            --color-bg-2: #111111;
-            --color-bg-3: #1a1a1a;
-            --color-text-0: #ffffff;
-            --color-text-1: #cccccc;
-            --color-text-2: #888888;
-            
-            /* Efectos */
-            --glow-primary: 0 0 10px var(--color-primary);
-            --glow-secondary: 0 0 10px var(--color-secondary);
-            --glow-danger: 0 0 10px var(--color-danger);
-            --glow-warning: 0 0 10px var(--color-warning);
-            --glow-legendary: 0 0 15px var(--color-legendary);
-            --glow-gold: 0 0 10px var(--color-gold);
-            
-            /* Tipografía */
-            --font-mono: 'SF Mono', 'Monaco', 'Consolas', 'Courier New', monospace;
-            --font-size-xs: 9px;
-            --font-size-sm: 10px;
-            --font-size-md: 11px;
-            --font-size-lg: 12px;
-            --font-size-xl: 13px;
-            
-            /* Espaciado */
-            --space-xs: 2px;
-            --space-sm: 4px;
-            --space-md: 6px;
-            --space-lg: 8px;
-            --space-xl: 12px;
-            
-            /* Bordes */
-            --radius-sm: 2px;
-            --radius-md: 3px;
-            --radius-lg: 4px;
-            
-            /* Transiciones */
-            --transition-fast: 0.1s ease;
-            --transition-normal: 0.2s ease;
-            --transition-slow: 0.3s ease;
-            
-            /* Z-index */
-            --z-modal: 1000;
-            --z-tooltip: 2000;
-            --z-notification: 3000;
-        }
-        
-        /* ===== RESET Y BASE ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        
-        body {
-            font-family: var(--font-mono);
-            font-size: var(--font-size-md);
-            line-height: 1.2;
-            background: var(--color-bg-0);
-            color: var(--color-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: var(--space-md);
-        }
-        
-        /* ===== CONTENEDOR PRINCIPAL ===== */
-        .terminal {
-            width: 100%;
-            max-width: 480px;
-            height: 100%;
-            max-height: 720px;
-            border: 1px solid rgba(0, 255, 136, 0.15);
-            border-radius: var(--radius-md);
-            background: linear-gradient(
-                145deg, 
-                rgba(10, 10, 10, 0.95), 
-                rgba(0, 0, 0, 1)
-            );
-            box-shadow: 
-                0 0 0 1px rgba(0, 255, 136, 0.05),
-                0 4px 20px rgba(0, 0, 0, 0.8),
-                inset 0 1px 0 rgba(255, 255, 255, 0.02);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* ===== HEADER ===== */
-        .header {
-            padding: var(--space-md) var(--space-lg);
-            border-bottom: 1px solid rgba(0, 255, 136, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(
-                to bottom,
-                rgba(0, 0, 0, 0.8),
-                rgba(10, 10, 10, 0.6)
-            );
-            flex-shrink: 0;
-        }
-        
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-        }
-        
-        .status-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--color-primary);
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-        
-        .status-dot.idle { background: var(--color-secondary); }
-        .status-dot.combat { background: var(--color-danger); animation: combat-pulse 0.5s infinite; }
-        @keyframes combat-pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
-        .status-dot.level-up { background: var(--color-warning); animation: level-pulse 1s infinite; }
-        @keyframes level-pulse {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
-        .status-dot.quest { background: var(--color-info); animation: quest-pulse 1.5s infinite; }
-        @keyframes quest-pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; transform: scale(1.1); }
-        }
-        
-        .status-text {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-1);
-            letter-spacing: 0.3px;
-        }
-        
-        .gold-display {
-            display: flex;
-            align-items: center;
-            gap: var(--space-xs);
-            color: var(--color-gold);
-            font-size: var(--font-size-sm);
-            font-variant-numeric: tabular-nums;
-        }
-        
-        .location {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-2);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .location span {
-            color: var(--color-primary);
-        }
-        
-        /* ===== CONTENIDO PRINCIPAL ===== */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding: var(--space-lg);
-            position: relative;
-            overflow: hidden;
-            min-height: 0;
-        }
-        
-        /* Avatar */
-        .avatar-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: var(--space-xl);
-            flex-shrink: 0;
-        }
-        
-        .avatar {
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: var(--font-size-lg);
-            line-height: 1;
-            white-space: pre;
-            text-align: center;
-            margin-bottom: var(--space-lg);
-            filter: brightness(1.1);
-            text-shadow: 0 0 5px currentColor;
-            position: relative;
-            transition: all var(--transition-normal);
-        }
-        
-        .avatar.combat {
-            filter: brightness(1.4) hue-rotate(320deg);
-            animation: combat-shake 0.6s infinite;
-        }
-        
-        @keyframes combat-shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-0.5px); }
-            75% { transform: translateX(0.5px); }
-        }
-        
-        .avatar.level-up {
-            animation: level-glow 1.5s infinite;
-        }
-        
-        @keyframes level-glow {
-            0%, 100% { text-shadow: 0 0 5px var(--color-primary); }
-            50% { text-shadow: 0 0 15px var(--color-warning); }
-        }
-        
-        .avatar.damaged {
-            filter: brightness(1.2) hue-rotate(180deg);
-            animation: damage-flicker 1s infinite;
-        }
-        
-        @keyframes damage-flicker {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .avatar.poisoned {
-            filter: brightness(1.1) hue-rotate(90deg);
-            animation: poison-pulse 1.5s infinite;
-        }
-        
-        @keyframes poison-pulse {
-            0%, 100% { text-shadow: 0 0 5px var(--color-purple); }
-            50% { text-shadow: 0 0 10px var(--color-purple); }
-        }
-        
-        .avatar.buffed {
-            filter: brightness(1.3) hue-rotate(60deg);
-            animation: buff-float 2s infinite ease-in-out;
-        }
-        
-        @keyframes buff-float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-1px); }
-        }
-        
-        /* Progresión */
-        .progression {
-            width: 100%;
-            max-width: 280px;
-            margin: 0 auto var(--space-lg);
-        }
-        
-        .level-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: var(--space-xs);
-            font-size: var(--font-size-sm);
-        }
-        
-        .level-text {
-            color: var(--color-text-1);
-        }
-        
-        .xp-text {
-            color: var(--color-primary);
-            font-variant-numeric: tabular-nums;
-        }
-        
-        .xp-bar {
-            height: 4px;
-            background: rgba(0, 255, 136, 0.1);
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            margin-bottom: var(--space-xs);
-            position: relative;
-        }
-        
-        .xp-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
-            transition: width 0.5s ease;
-        }
-        
-        .hp-bar {
-            height: 3px;
-            background: rgba(255, 68, 68, 0.1);
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-        }
-        
-        .hp-fill {
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(90deg, var(--color-danger), #ff6b6b);
-            transition: width 0.3s ease;
-        }
-        
-        /* Stats Grid */
-        .stats-container {
-            margin-bottom: var(--space-lg);
-        }
-        
-        .stats-title {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-2);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: var(--space-sm);
-            text-align: center;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: var(--space-sm);
-            margin-bottom: var(--space-md);
-        }
-        
-        .stat {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: var(--space-sm);
-            border: 1px solid rgba(0, 255, 136, 0.08);
-            border-radius: var(--radius-sm);
-            background: rgba(0, 0, 0, 0.3);
-            transition: var(--transition-fast);
-            cursor: help;
-            position: relative;
-        }
-        
-        .stat:hover {
-            border-color: rgba(0, 255, 136, 0.2);
-            background: rgba(0, 0, 0, 0.4);
-            transform: translateY(-1px);
-        }
-        
-        .stat-label {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-2);
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .stat-value {
-            font-size: var(--font-size-md);
-            font-weight: bold;
-            font-variant-numeric: tabular-nums;
-        }
-        
-        .stat-value.normal { color: var(--color-primary); }
-        .stat-value.high { color: var(--color-success); }
-        .stat-value.very-high { color: var(--color-warning); }
-        .stat-value.epic { color: var(--color-legendary); text-shadow: var(--glow-legendary); }
-        .stat-value.low { color: var(--color-muted); }
-        
-        /* Stats secundarios */
-        .secondary-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-sm);
-            font-size: var(--font-size-sm);
-        }
-        
-        .secondary-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: var(--space-sm);
-            border: 1px solid rgba(0, 136, 255, 0.08);
-            border-radius: var(--radius-sm);
-            background: rgba(0, 0, 0, 0.3);
-            transition: var(--transition-fast);
-        }
-        
-        .secondary-stat:hover {
-            border-color: rgba(0, 136, 255, 0.2);
-            background: rgba(0, 0, 0, 0.4);
-        }
-        
-        .secondary-label {
-            color: var(--color-text-2);
-        }
-        
-        .secondary-value {
-            color: var(--color-secondary);
-            font-variant-numeric: tabular-nums;
-        }
-        
-        /* ===== PANELES DE INVENTARIO Y EQUIPO ===== */
-        .panels-container {
-            display: flex;
-            gap: var(--space-md);
-            margin-top: var(--space-lg);
-            flex: 1;
-            min-height: 0;
-        }
-        
-        .panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid rgba(0, 255, 136, 0.1);
-            border-radius: var(--radius-sm);
-            background: rgba(0, 0, 0, 0.4);
-            overflow: hidden;
-            min-width: 0;
-            transition: all var(--transition-normal);
-        }
-        
-        .panel:hover {
-            border-color: rgba(0, 255, 136, 0.2);
-        }
-        
-        .panel-header {
-            padding: var(--space-sm) var(--space-md);
-            border-bottom: 1px solid rgba(0, 255, 136, 0.1);
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        
-        .panel-title {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-1);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .panel-count {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-2);
-            font-variant-numeric: tabular-nums;
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 4px;
-            border-radius: var(--radius-sm);
-        }
-        
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--space-sm);
-            min-height: 0;
-        }
-        
-        .panel-content::-webkit-scrollbar {
-            width: 3px;
-        }
-        
-        .panel-content::-webkit-scrollbar-track {
-            background: rgba(0, 255, 136, 0.05);
-        }
-        
-        .panel-content::-webkit-scrollbar-thumb {
-            background: rgba(0, 255, 136, 0.2);
-            border-radius: var(--radius-sm);
-        }
-        
-        /* Items del inventario */
-        .inventory-item {
-            display: flex;
-            align-items: center;
-            padding: var(--space-sm);
-            margin-bottom: var(--space-xs);
-            border: 1px solid rgba(0, 255, 136, 0.05);
-            border-radius: var(--radius-sm);
-            background: rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            transition: all var(--transition-fast);
-            position: relative;
-        }
-        
-        .inventory-item:hover {
-            border-color: rgba(0, 255, 136, 0.2);
-            background: rgba(0, 0, 0, 0.5);
-            transform: translateX(1px);
-        }
-        
-        .inventory-item:active {
-            transform: scale(0.98);
-        }
-        
-        .inventory-item.equipped {
-            border-color: rgba(0, 136, 255, 0.3);
-            background: rgba(0, 136, 255, 0.1);
-        }
-        
-        .inventory-item.usable:hover {
-            border-color: rgba(0, 255, 136, 0.4);
-        }
-        
-        .item-icon {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: var(--space-sm);
-            font-size: var(--font-size-md);
-            flex-shrink: 0;
-        }
-        
-        .item-info {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .item-name {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-1);
-            margin-bottom: 1px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .item-type {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-2);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        .item-type.consumable { color: var(--color-success); }
-        .item-type.equipment { color: var(--color-secondary); }
-        .item-type.key { color: var(--color-warning); }
-        .item-type.special { color: var(--color-legendary); }
-        
-        .item-quantity {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-2);
-            background: rgba(0, 0, 0, 0.4);
-            padding: 1px 4px;
-            border-radius: var(--radius-sm);
-            margin-left: var(--space-sm);
-            flex-shrink: 0;
-        }
-        
-        .empty-panel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--color-text-2);
-            font-size: var(--font-size-sm);
-            text-align: center;
-            padding: var(--space-xl);
-        }
-        
-        .empty-panel i {
-            font-size: 20px;
-            margin-bottom: var(--space-sm);
-            opacity: 0.3;
-        }
-        
-        /* Slots de equipo */
-        .equipment-slots {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--space-sm);
-        }
-        
-        .equipment-slot {
-            display: flex;
-            flex-direction: column;
-            padding: var(--space-sm);
-            border: 1px solid rgba(0, 136, 255, 0.1);
-            border-radius: var(--radius-sm);
-            background: rgba(0, 0, 0, 0.3);
-            position: relative;
-            min-height: 50px;
-            transition: var(--transition-fast);
-        }
-        
-        .equipment-slot:hover {
-            border-color: rgba(0, 136, 255, 0.2);
-        }
-        
-        .equipment-slot.filled {
-            border-color: rgba(0, 136, 255, 0.3);
-            background: rgba(0, 136, 255, 0.1);
-        }
-        
-        .slot-name {
-            font-size: var(--font-size-xs);
-            color: var(--color-text-2);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            margin-bottom: var(--space-xs);
-        }
-        
-        .slot-item {
-            font-size: var(--font-size-sm);
-            color: var(--color-text-1);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .slot-stats {
-            font-size: var(--font-size-xs);
-            color: var(--color-success);
-            margin-top: 2px;
-        }
-        
-        .unequip-btn {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 14px;
-            height: 14px;
-            background: rgba(255, 68, 68, 0.2);
-            border: 1px solid rgba(255, 68, 68, 0.3);
-            border-radius: 2px;
-            color: var(--color-danger);
-            font-size: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0;
-            transition: var(--transition-fast);
-        }
-        
-        .unequip-btn:hover {
-            background: rgba(255, 68, 68, 0.3);
-            border-color: rgba(255, 68, 68, 0.5);
-        }
-        
-        .equipment-slot:hover .unequip-btn {
-            opacity: 1;
-        }
-        
-        /* ===== LOG ===== */
-        .log-container {
-            flex: 0 0 auto;
-            height: 100px;
-            border-top: 1px solid rgba(0, 255, 136, 0.1);
-            background: rgba(0, 0, 0, 0.8);
-            position: relative;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        
-        .log {
-            height: 100%;
-            padding: var(--space-md);
-            overflow-y: auto;
-            scroll-behavior: smooth;
-        }
-        
-        .log::-webkit-scrollbar {
-            width: 3px;
-        }
-        
-        .log::-webkit-scrollbar-track {
-            background: rgba(0, 255, 136, 0.05);
-        }
-        
-        .log::-webkit-scrollbar-thumb {
-            background: rgba(0, 255, 136, 0.2);
-            border-radius: var(--radius-sm);
-        }
-        
-        .log-entry {
-            margin-bottom: 2px;
-            opacity: 0;
-            animation: log-appear 0.2s forwards;
-            line-height: 1.3;
-            font-size: var(--font-size-sm);
-            padding-left: var(--space-sm);
-            border-left: 1px solid transparent;
-            transition: opacity var(--transition-fast);
-        }
-        
-        @keyframes log-appear {
-            to { opacity: 0.9; }
-        }
-        
-        .log-entry.system { color: var(--color-text-1); border-left-color: var(--color-text-2); }
-        .log-entry.combat { color: var(--color-danger); border-left-color: var(--color-danger); }
-        .log-entry.event { color: var(--color-secondary); border-left-color: var(--color-secondary); }
-        .log-entry.decision { color: var(--color-primary); border-left-color: var(--color-primary); }
-        .log-entry.level { color: var(--color-warning); border-left-color: var(--color-warning); }
-        .log-entry.item { color: var(--color-success); border-left-color: var(--color-success); }
-        .log-entry.gold { color: var(--color-gold); border-left-color: var(--color-gold); }
-        .log-entry.quest { color: var(--color-info); border-left-color: var(--color-info); }
-        .log-entry.skill { color: var(--color-purple); border-left-color: var(--color-purple); }
-        
-        /* ===== TOOLTIPS ===== */
-        .tooltip {
-            position: fixed;
-            background: rgba(0, 0, 0, 0.95);
-            border: 1px solid rgba(0, 255, 136, 0.2);
-            border-radius: var(--radius-sm);
-            padding: var(--space-sm);
-            font-size: var(--font-size-sm);
-            max-width: 220px;
-            z-index: var(--z-tooltip);
-            opacity: 0;
-            transform: translateY(-5px);
-            transition: var(--transition-fast);
-            pointer-events: none;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(2px);
-        }
-        
-        .tooltip.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        .tooltip-title {
-            color: var(--color-primary);
-            font-weight: bold;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .tooltip-desc {
-            color: var(--color-text-1);
-            margin-bottom: 6px;
-            line-height: 1.3;
-        }
-        
-        .tooltip-stats {
-            color: var(--color-success);
-            font-size: var(--font-size-xs);
-        }
-        
-        /* ===== MODALES ===== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: var(--z-modal);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity var(--transition-normal);
-            backdrop-filter: blur(2px);
-        }
-        
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-        
-        .modal {
-            background: var(--color-bg-1);
-            border: 1px solid rgba(0, 255, 136, 0.2);
-            border-radius: var(--radius-md);
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-            transform: translateY(-20px);
-            transition: transform var(--transition-normal);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        
-        .modal-overlay.active .modal {
-            transform: translateY(0);
-        }
-        
-        .modal-header {
-            padding: var(--space-md) var(--space-lg);
-            border-bottom: 1px solid rgba(0, 255, 136, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.6);
-        }
-        
-        .modal-title {
-            color: var(--color-primary);
-            font-size: var(--font-size-lg);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--color-text-2);
-            font-size: var(--font-size-lg);
-            cursor: pointer;
-            padding: var(--space-xs);
-            line-height: 1;
-            transition: color var(--transition-fast);
-        }
-        
-        .modal-close:hover {
-            color: var(--color-danger);
-        }
-        
-        .modal-content {
-            padding: var(--space-lg);
-            overflow-y: auto;
-            flex: 1;
-        }
-        
-        /* ===== NOTIFICACIONES ===== */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-            border-radius: var(--radius-sm);
-            padding: var(--space-md);
-            max-width: 300px;
-            z-index: var(--z-notification);
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all var(--transition-normal);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-        }
-        
-        .notification.show {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        
-        .notification-title {
-            color: var(--color-primary);
-            font-weight: bold;
-            margin-bottom: var(--space-xs);
-        }
-        
-        .notification-message {
-            color: var(--color-text-1);
-            font-size: var(--font-size-sm);
-        }
-        
-        /* ===== EFECTOS DE ESTADO ===== */
-        .status-effects {
-            position: absolute;
-            top: var(--space-sm);
-            right: var(--space-sm);
-            display: flex;
-            gap: var(--space-xs);
-            z-index: 1;
-        }
-        
-        .status-effect {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            position: relative;
-            cursor: help;
-        }
-        
-        .status-effect.poison { background: var(--color-purple); }
-        .status-effect.buff { background: var(--color-success); }
-        .status-effect.debuff { background: var(--color-danger); }
-        
-        /* ===== ANIMACIONES DE FEEDBACK ===== */
-        .bounce {
-            animation: bounce 0.3s ease;
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-        
-        .shake {
-            animation: shake 0.5s ease;
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-2px); }
-            75% { transform: translateX(2px); }
-        }
-        
-        .float {
-            animation: float 2s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-2px); }
-        }
-        
-        /* ===== RESPONSIVE ===== */
-        @media (max-height: 600px) {
-            .terminal { max-height: 100vh; }
-            .main-content { padding: var(--space-md); }
-            .avatar { font-size: var(--font-size-md); margin-bottom: var(--space-md); }
-            .panels-container { margin-top: var(--space-md); }
-            .log-container { height: 80px; }
-        }
-        
-        @media (max-width: 400px) {
-            .header { padding: var(--space-sm) var(--space-md); }
-            .main-content { padding: var(--space-md); }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .panels-container { flex-direction: column; gap: var(--space-sm); }
-            .panel { min-height: 120px; }
-        }
-        
-        /* ===== UTILIDADES ===== */
-        .hidden { display: none !important; }
-        .fade-in { animation: fadeIn 0.3s ease; }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="HushBox - Secure messaging and file transfer with enterprise-grade QR encryption">
+    <meta name="keywords" content="secure messaging, encryption, QR, AES-256, file transfer, privacy">
+    <meta name="author" content="HushBox Team">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval';
+                   style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+                   font-src 'self' https://cdnjs.cloudflare.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self';
+                   base-uri 'self';
+                   form-action 'self';
+                   frame-ancestors 'none'">
+    <title>HushBox - Secure Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <div class="terminal">
-        <!-- Header -->
-        <div class="header">
-            <div class="status-indicator">
-                <div class="status-dot idle" id="status-dot"></div>
-                <div class="status-text" id="status-text">AUTONOMUS v5.0</div>
-            </div>
-            <div class="gold-display">
-                <span>💰</span>
-                <span id="gold-amount">0</span>
-            </div>
-            <div class="location" id="location">[<span>INICIALIZANDO</span>]</div>
-        </div>
-        
-        <!-- Efectos de estado -->
-        <div class="status-effects" id="status-effects"></div>
-        
-        <!-- Contenido Principal -->
-        <div class="main-content">
-            <!-- Sección Avatar -->
-            <div class="avatar-section">
-                <div class="avatar" id="avatar">
-    ╔═══════╗
-    ║ ○   ○ ║
-    ║   ▽   ║
-    ║ ╚═∩═╝ ║
-    ╚═══█═══╝
-                </div>
-                
-                <!-- Progresión -->
-                <div class="progression">
-                    <div class="level-info">
-                        <div class="level-text" id="level-text">NIVEL 1</div>
-                        <div class="xp-text" id="xp-text">0/100 XP</div>
-                    </div>
-                    <div class="xp-bar">
-                        <div class="xp-fill" id="xp-fill"></div>
-                    </div>
-                    <div class="hp-bar">
-                        <div class="hp-fill" id="hp-fill"></div>
-                    </div>
-                </div>
-                
-                <!-- Stats -->
-                <div class="stats-container">
-                    <div class="stats-title">ATRIBUTOS</div>
-                    <div class="stats-grid" id="stats-grid">
-                        <!-- Generado dinámicamente -->
-                    </div>
-                    
-                    <div class="secondary-stats">
-                        <div class="secondary-stat">
-                            <div class="secondary-label">ENEMIGOS</div>
-                            <div class="secondary-value" id="enemies-defeated">0</div>
-                        </div>
-                        <div class="secondary-stat">
-                            <div class="secondary-label">MISIONES</div>
-                            <div class="secondary-value" id="quests-completed">0</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Paneles de Inventario y Equipo -->
-            <div class="panels-container">
-                <!-- Inventario -->
-                <div class="panel inventory-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">INVENTARIO</div>
-                        <div class="panel-count" id="inventory-count">0/20</div>
-                    </div>
-                    <div class="panel-content" id="inventory-list">
-                        <div class="empty-panel">
-                            <i>📦</i>
-                            <div>Inventario vacío</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Equipo -->
-                <div class="panel equipment-panel">
-                    <div class="panel-header">
-                        <div class="panel-title">EQUIPO</div>
-                        <div class="panel-count" id="equipment-count">0/4</div>
-                    </div>
-                    <div class="panel-content">
-                        <div class="equipment-slots" id="equipment-slots">
-                            <!-- Generado dinámicamente -->
-                        </div>
+    <!-- HEADER (sin botón de tema) -->
+    <header class="header glass" role="banner">
+        <div class="header-top">
+            <h1 class="logo">
+                <a href="#" class="lock-icon" title="Enterprise Security">
+                    <i class="fas fa-lock"></i>
+                </a>
+                HUSH<span class="white-text">B</span><i class="fas fa-qrcode qr-icon"></i><span class="white-text">X</span>
+            </h1>
+            <div class="header-actions">
+                <div class="dropdown" id="dropdown" aria-expanded="false">
+                    <button id="more-menu" class="dropdown-toggle" title="More options">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <button id="settings-button" class="dropdown-item">
+                            <i class="fas fa-cog"></i> Settings
+                        </button>
+                        <button id="clear-log" class="dropdown-item">
+                            <i class="fas fa-trash-alt"></i> Clear log
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Log -->
-        <div class="log-container">
-            <div class="log" id="log">
-                <div class="log-entry system">[SISTEMA] Inicializando Autonomus Avatar v5.0...</div>
-                <div class="log-entry system">[SISTEMA] Cargando sistemas mejorados...</div>
+        <div class="header-bottom">
+            <div id="security-level-indicator" class="security-level high">
+                <i class="fas fa-shield-alt"></i>
+                <span>Security Level: High</span>
+            </div>
+            <div class="session-indicator">
+                <i class="fas fa-hourglass-half"></i>
+                <span id="session-time">30:00</span>
             </div>
         </div>
-        
-        <!-- Tooltip flotante -->
-        <div class="tooltip" id="tooltip"></div>
-        
-        <!-- Modal para misiones -->
-        <div class="modal-overlay" id="quest-modal">
-            <div class="modal">
-                <div class="modal-header">
-                    <div class="modal-title">MISIONES</div>
-                    <button class="modal-close" onclick="game.hideQuestModal()">✕</button>
-                </div>
-                <div class="modal-content" id="quest-list">
-                    <!-- Misiones cargadas dinámicamente -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal para habilidades -->
-        <div class="modal-overlay" id="skill-modal">
-            <div class="modal">
-                <div class="modal-header">
-                    <div class="modal-title">HABILIDADES</div>
-                    <button class="modal-close" onclick="game.hideSkillModal()">✕</button>
-                </div>
-                <div class="modal-content" id="skill-list">
-                    <!-- Habilidades cargadas dinámicamente -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal para crafting -->
-        <div class="modal-overlay" id="craft-modal">
-            <div class="modal">
-                <div class="modal-header">
-                    <div class="modal-title">CRAFTING</div>
-                    <button class="modal-close" onclick="game.hideCraftModal()">✕</button>
-                </div>
-                <div class="modal-content" id="craft-list">
-                    <!-- Recetas cargadas dinámicamente -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal para tienda -->
-        <div class="modal-overlay" id="shop-modal">
-            <div class="modal">
-                <div class="modal-header">
-                    <div class="modal-title">TIENDA</div>
-                    <button class="modal-close" onclick="game.hideShopModal()">✕</button>
-                </div>
-                <div class="modal-content" id="shop-list">
-                    <!-- Items de la tienda cargados dinámicamente -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal para leaderboard -->
-        <div class="modal-overlay" id="leaderboard-modal">
-            <div class="modal">
-                <div class="modal-header">
-                    <div class="modal-title">LEADERBOARD</div>
-                    <button class="modal-close" onclick="game.hideLeaderboardModal()">✕</button>
-                </div>
-                <div class="modal-content" id="leaderboard-list">
-                    <!-- Leaderboard cargado dinámicamente -->
-                </div>
-            </div>
-        </div>
-        
-        <!-- Notificación -->
-        <div class="notification" id="notification"></div>
-    </div>
+    </header>
 
-    <script>
-        // ============================================
-        // AUTONOMUS AVATAR v5.0 - SISTEMA MEJORADO
-        // ============================================
+    <!-- MAIN DASHBOARD -->
+    <main class="dashboard" role="main">
+        <!-- PANEL DE MENSAJE (contiene modos mensaje y archivo) -->
+        <section id="panel-message" class="panel active" role="tabpanel">
+            <!-- MODO MENSAJE -->
+            <div id="message-mode" class="message-mode">
+                <div class="card encrypt-card">
+                    <form id="encrypt-form" novalidate>
+                        <!-- Passphrase -->
+                        <div class="input-group">
+                            <label class="input-label" for="passphrase">Passphrase</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-key icon-left"></i>
+                                <input type="password" id="passphrase" placeholder="Minimum 12 characters" required aria-describedby="passphrase-error">
+                                <div class="right-icons">
+                                    <button type="button" class="icon-right toggle-password" data-target="passphrase" title="Show/Hide">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="icon-right generate-password" title="Generate Secure">
+                                        <i class="fas fa-dice"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="password-strength">
+                                <div class="password-strength-bar" id="password-strength-bar"></div>
+                            </div>
+                            <span id="passphrase-error" class="error-message hidden" role="alert"></span>
+                        </div>
 
-        // Librería LZString para compresión (CDN)
-        const LZString = {
-            compressToUTF16: function(input) {
-                try {
-                    return input;
-                } catch(e) {
-                    console.error('Compresión fallida:', e);
-                    return input;
-                }
-            },
-            decompressFromUTF16: function(input) {
-                try {
-                    return input;
-                } catch(e) {
-                    console.error('Descompresión fallida:', e);
-                    return input;
-                }
-            }
-        };
+                        <!-- Mensaje -->
+                        <div class="input-group">
+                            <label class="input-label" for="message-input">Secret Message</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-comment-dots icon-left"></i>
+                                <textarea id="message-input" placeholder="Write your secure message here..." rows="5" maxlength="10000" required aria-describedby="char-counter"></textarea>
+                                <div id="char-counter" class="char-counter">0/10000</div>
+                            </div>
+                        </div>
 
-        class AutonomusAvatar {
-            constructor() {
-                // ===== CONFIGURACIÓN =====
-                this.config = {
-                    baseXP: 100,
-                    xpMultiplier: 1.5,
-                    baseHP: 100,
-                    hpPerVIT: 5,
-                    regenRate: 0.005,
-                    combatChance: 0.02,
-                    eventChance: 0.01,
-                    itemDropChance: 0.15,
-                    inventorySize: 20,
-                    autoSaveInterval: 30000,
-                    goldDropChance: 0.3,
-                    goldMin: 1,
-                    goldMax: 10,
-                    skillPointsPerLevel: 1
-                };
-                
-                // ===== ESTADO DEL JUEGO =====
-                this.state = {
-                    level: 1,
-                    xp: 0,
-                    xpToNextLevel: this.config.baseXP,
-                    hp: 100,
-                    maxHp: 100,
-                    stats: {},
-                    baseStats: {},
-                    location: null,
-                    isInCombat: false,
-                    currentEnemy: null,
-                    currentEvent: null,
-                    enemiesDefeated: 0,
-                    totalDamage: 0,
-                    decisionsMade: 0,
-                    gameTime: 0,
-                    lastUpdate: performance.now(),
-                    needsSave: false,
-                    
-                    // Nuevos sistemas
-                    gold: 0,
-                    skillPoints: 0,
-                    quests: {},
-                    activeQuests: [],
-                    completedQuests: [],
-                    skills: {},
-                    activeSkills: [],
-                    statusEffects: [],
-                    craftingRecipes: [],
-                    leaderboard: [],
-                    
-                    // Inventario y Equipo
-                    inventory: [],
-                    equipment: {
-                        cabeza: null,
-                        torso: null,
-                        manos: null,
-                        accesorio: null
-                    },
-                    equipmentStats: {}
-                };
-                
-                // ===== DATOS DEL JUEGO =====
-                this.initializeGameData();
-                
-                // ===== REFERENCIAS DOM =====
-                this.elements = {
-                    avatar: document.getElementById('avatar'),
-                    statsGrid: document.getElementById('stats-grid'),
-                    xpFill: document.getElementById('xp-fill'),
-                    xpText: document.getElementById('xp-text'),
-                    hpFill: document.getElementById('hp-fill'),
-                    levelText: document.getElementById('level-text'),
-                    log: document.getElementById('log'),
-                    location: document.getElementById('location'),
-                    statusDot: document.getElementById('status-dot'),
-                    statusText: document.getElementById('status-text'),
-                    tooltip: document.getElementById('tooltip'),
-                    inventoryList: document.getElementById('inventory-list'),
-                    inventoryCount: document.getElementById('inventory-count'),
-                    equipmentSlots: document.getElementById('equipment-slots'),
-                    equipmentCount: document.getElementById('equipment-count'),
-                    enemiesDefeated: document.getElementById('enemies-defeated'),
-                    totalDamage: document.getElementById('total-damage'),
-                    goldAmount: document.getElementById('gold-amount'),
-                    questsCompleted: document.getElementById('quests-completed'),
-                    statusEffects: document.getElementById('status-effects'),
-                    
-                    // Modales
-                    questModal: document.getElementById('quest-modal'),
-                    skillModal: document.getElementById('skill-modal'),
-                    craftModal: document.getElementById('craft-modal'),
-                    shopModal: document.getElementById('shop-modal'),
-                    leaderboardModal: document.getElementById('leaderboard-modal'),
-                    
-                    // Contenidos modales
-                    questList: document.getElementById('quest-list'),
-                    skillList: document.getElementById('skill-list'),
-                    craftList: document.getElementById('craft-list'),
-                    shopList: document.getElementById('shop-list'),
-                    leaderboardList: document.getElementById('leaderboard-list'),
-                    
-                    // Notificación
-                    notification: document.getElementById('notification')
-                };
-                
-                // ===== SISTEMA =====
-                this.animationFrame = null;
-                this.saveInterval = null;
-                this.locationTimer = null;
-                this.statusEffectTimer = null;
-                this.mouseX = 0;
-                this.mouseY = 0;
-                this.activeTooltip = null;
-                this.tooltipTimeout = null;
-                this.notificationTimeout = null;
-                
-                // Pool de tooltips
-                this.tooltipPool = [];
-                this.maxTooltips = 5;
-                
-                // Virtualización del inventario
-                this.visibleInventoryItems = 10;
-                this.inventoryScrollTop = 0;
-                
-                // Inicializar
-                this.init();
-            }
-            
-            // ===== INICIALIZACIÓN =====
-            initializeGameData() {
-                // Stats base
-                this.statsData = {
-                    FUE: { name: 'FUERZA', desc: 'Daño físico y capacidad de carga' },
-                    AGI: { name: 'AGILIDAD', desc: 'Velocidad y probabilidad de esquivar' },
-                    INT: { name: 'INTELECTO', desc: 'Daño mágico y experiencia ganada' },
-                    VIT: { name: 'VITALIDAD', desc: 'Salud máxima y regeneración' },
-                    SUE: { name: 'SUERTE', desc: 'Críticos y encontrar objetos' },
-                    CAR: { name: 'CARISMA', desc: 'Reducción de combates y aliados' },
-                    PER: { name: 'PERCEPCIÓN', desc: 'Detectar eventos y peligros' },
-                    VOL: { name: 'VOLUNTAD', desc: 'Resistencia a efectos mentales' }
-                };
-                
-                // Biomas
-                this.biomes = {
-                    urban: { name: 'URBANO', danger: 3, color: '#00aaff', shop: true },
-                    wilderness: { name: 'SALVAJE', danger: 4, color: '#00cc66', shop: false },
-                    digital: { name: 'DIGITAL', danger: 5, color: '#ff00ff', shop: true },
-                    unknown: { name: 'DESCONOCIDO', danger: 2, color: '#888888', shop: false }
-                };
-                
-                // Ítems del juego
-                this.items = {
-                    // Consumibles
-                    'Poción de Salud': {
-                        type: 'consumable',
-                        icon: '🧪',
-                        desc: 'Restaura 50 puntos de salud',
-                        effect: { hp: 50 },
-                        rarity: 1,
-                        value: 10,
-                        shopPrice: 15
-                    },
-                    'Poción Mayor de Salud': {
-                        type: 'consumable',
-                        icon: '💊',
-                        desc: 'Restaura 100 puntos de salud',
-                        effect: { hp: 100 },
-                        rarity: 2,
-                        value: 25,
-                        shopPrice: 40
-                    },
-                    'Elixir de Energía': {
-                        type: 'consumable',
-                        icon: '⚗️',
-                        desc: 'Restaura 30 puntos de energía',
-                        effect: { energy: 30 },
-                        rarity: 2,
-                        value: 20,
-                        shopPrice: 30
-                    },
-                    'Tónico de Fuerza': {
-                        type: 'consumable',
-                        icon: '💪',
-                        desc: 'Aumenta la Fuerza en 2 puntos por 5 minutos',
-                        effect: { FUE: 2, temporary: true, duration: 300 },
-                        rarity: 3,
-                        value: 50,
-                        shopPrice: 75
-                    },
-                    'Antídoto': {
-                        type: 'consumable',
-                        icon: '🌿',
-                        desc: 'Cura efectos de veneno',
-                        effect: { cure: 'poison' },
-                        rarity: 2,
-                        value: 30,
-                        shopPrice: 45
-                    },
-                    
-                    // Equipo - Cabeza
-                    'Casco de Cuero': {
-                        type: 'equipment',
-                        slot: 'cabeza',
-                        icon: '⛑️',
-                        desc: 'Protección básica para la cabeza',
-                        stats: { VIT: 1 },
-                        rarity: 1,
-                        value: 30,
-                        shopPrice: 45
-                    },
-                    'Casco de Hierro': {
-                        type: 'equipment',
-                        slot: 'cabeza',
-                        icon: '🪖',
-                        desc: 'Casco reforzado con hierro',
-                        stats: { VIT: 3, FUE: 1 },
-                        rarity: 2,
-                        value: 75,
-                        shopPrice: 100
-                    },
-                    'Yelmo del Sabio': {
-                        type: 'equipment',
-                        slot: 'cabeza',
-                        icon: '👑',
-                        desc: 'Yelmo que aumenta la inteligencia',
-                        stats: { INT: 3, PER: 2 },
-                        rarity: 3,
-                        value: 150,
-                        shopPrice: 200
-                    },
-                    
-                    // Equipo - Torso
-                    'Túnica de Aprendiz': {
-                        type: 'equipment',
-                        slot: 'torso',
-                        icon: '👕',
-                        desc: 'Túnica básica para principiantes',
-                        stats: { VIT: 1 },
-                        rarity: 1,
-                        value: 25,
-                        shopPrice: 35
-                    },
-                    'Armadura de Cuero': {
-                        type: 'equipment',
-                        slot: 'torso',
-                        icon: '🧥',
-                        desc: 'Armadura ligera de cuero endurecido',
-                        stats: { VIT: 2, AGI: 1 },
-                        rarity: 2,
-                        value: 60,
-                        shopPrice: 80
-                    },
-                    'Cota de Mallas': {
-                        type: 'equipment',
-                        slot: 'torso',
-                        icon: '🥋',
-                        desc: 'Armadura media de anillas metálicas',
-                        stats: { VIT: 4, FUE: 1 },
-                        rarity: 3,
-                        value: 120,
-                        shopPrice: 150
-                    },
-                    
-                    // Equipo - Manos
-                    'Guantes de Cuero': {
-                        type: 'equipment',
-                        slot: 'manos',
-                        icon: '🧤',
-                        desc: 'Guantes básicos de protección',
-                        stats: { AGI: 1 },
-                        rarity: 1,
-                        value: 20,
-                        shopPrice: 30
-                    },
-                    'Guantes de Acero': {
-                        type: 'equipment',
-                        slot: 'manos',
-                        icon: '🥊',
-                        desc: 'Guantes reforzados con placas de acero',
-                        stats: { FUE: 2, VIT: 1 },
-                        rarity: 2,
-                        value: 55,
-                        shopPrice: 70
-                    },
-                    'Guantes del Ladrón': {
-                        type: 'equipment',
-                        slot: 'manos',
-                        icon: '🖐️',
-                        desc: 'Guantes que aumentan la agilidad y suerte',
-                        stats: { AGI: 3, SUE: 2 },
-                        rarity: 3,
-                        value: 130,
-                        shopPrice: 170
-                    },
-                    
-                    // Equipo - Accesorio
-                    'Anillo de Cobre': {
-                        type: 'equipment',
-                        slot: 'accesorio',
-                        icon: '💍',
-                        desc: 'Anillo simple de cobre',
-                        stats: { SUE: 1 },
-                        rarity: 1,
-                        value: 15,
-                        shopPrice: 25
-                    },
-                    'Amuleto de Protección': {
-                        type: 'equipment',
-                        slot: 'accesorio',
-                        icon: '📿',
-                        desc: 'Amuleto que brinda protección adicional',
-                        stats: { VIT: 2, VOL: 1 },
-                        rarity: 2,
-                        value: 45,
-                        shopPrice: 60
-                    },
-                    'Collar del Sabio': {
-                        type: 'equipment',
-                        slot: 'accesorio',
-                        icon: '📿',
-                        desc: 'Collar que aumenta la inteligencia y percepción',
-                        stats: { INT: 2, PER: 2, CAR: 1 },
-                        rarity: 3,
-                        value: 100,
-                        shopPrice: 130
-                    },
-                    
-                    // Materiales para crafting
-                    'Piel de Lobo': {
-                        type: 'material',
-                        icon: '🐺',
-                        desc: 'Piel de lobo para crafting',
-                        rarity: 1,
-                        value: 5
-                    },
-                    'Mineral de Hierro': {
-                        type: 'material',
-                        icon: '⛏️',
-                        desc: 'Mineral de hierro para forjar',
-                        rarity: 2,
-                        value: 10
-                    },
-                    'Cristal Mágico': {
-                        type: 'material',
-                        icon: '💎',
-                        desc: 'Cristal con propiedades mágicas',
-                        rarity: 3,
-                        value: 25
-                    },
-                    
-                    // Objetos especiales
-                    'Llave Antigua': {
-                        type: 'key',
-                        icon: '🗝️',
-                        desc: 'Llave antigua de origen desconocido',
-                        rarity: 4,
-                        value: 200
-                    },
-                    'Mapa del Tesoro': {
-                        type: 'special',
-                        icon: '🗺️',
-                        desc: 'Mapa que marca la ubicación de un tesoro oculto',
-                        rarity: 5,
-                        value: 500
-                    }
-                };
-                
-                // Enemigos
-                this.enemies = {
-                    'Ladrón': { hp: 40, attack: 8, defense: 2, xp: 25, gold: [1, 5] },
-                    'Matón': { hp: 60, attack: 12, defense: 4, xp: 40, gold: [2, 8] },
-                    'Bestia Salvaje': { hp: 80, attack: 15, defense: 6, xp: 55, gold: [3, 10] },
-                    'Espíritu Corrupto': { hp: 70, attack: 18, defense: 3, xp: 65, gold: [4, 12] },
-                    'Guardián Anciente': { hp: 120, attack: 20, defense: 10, xp: 90, gold: [5, 15] }
-                };
-                
-                // Misiones
-                this.questsData = {
-                    'primer_combate': {
-                        name: 'Primera Sangre',
-                        description: 'Derrota a tu primer enemigo',
-                        type: 'combat',
-                        target: 1,
-                        reward: { xp: 50, gold: 10, item: 'Poción de Salud' },
-                        requiredLevel: 1
-                    },
-                    'coleccionista': {
-                        name: 'Coleccionista',
-                        description: 'Recoge 5 ítems diferentes',
-                        type: 'collection',
-                        target: 5,
-                        reward: { xp: 100, gold: 25, item: 'Llave Antigua' },
-                        requiredLevel: 2
-                    },
-                    'artesano': {
-                        name: 'Artesano',
-                        description: 'Crea un ítem usando el sistema de crafting',
-                        type: 'crafting',
-                        target: 1,
-                        reward: { xp: 75, gold: 15 },
-                        requiredLevel: 3
-                    },
-                    'cazador': {
-                        name: 'Cazador',
-                        description: 'Derrota 10 enemigos',
-                        type: 'combat',
-                        target: 10,
-                        reward: { xp: 200, gold: 50, item: 'Armadura de Cuero' },
-                        requiredLevel: 4
-                    }
-                };
-                
-                // Habilidades
-                this.skillsData = {
-                    'doble_golpe': {
-                        name: 'Doble Golpe',
-                        description: 'Ataca dos veces en un turno de combate',
-                        type: 'active',
-                        cost: 20,
-                        levelRequirement: 5,
-                        effect: { damageMultiplier: 1.5 },
-                        cooldown: 3
-                    },
-                    'regeneracion': {
-                        name: 'Regeneración',
-                        description: 'Regenera 5% de HP por segundo fuera de combate',
-                        type: 'passive',
-                        cost: 15,
-                        levelRequirement: 3,
-                        effect: { hpRegen: 0.05 }
-                    },
-                    'cazador_de_fortunas': {
-                        name: 'Cazador de Fortunas',
-                        description: 'Aumenta el oro encontrado en un 20%',
-                        type: 'passive',
-                        cost: 25,
-                        levelRequirement: 4,
-                        effect: { goldBonus: 0.2 }
-                    },
-                    'piel_endurecida': {
-                        name: 'Piel Endurecida',
-                        description: 'Reduce el daño recibido en un 15%',
-                        type: 'passive',
-                        cost: 30,
-                        levelRequirement: 6,
-                        effect: { damageReduction: 0.15 }
-                    }
-                };
-                
-                // Efectos de estado
-                this.statusEffectsData = {
-                    'veneno': {
-                        name: 'Envenenado',
-                        description: 'Pierde 2 HP por segundo',
-                        type: 'debuff',
-                        color: 'purple',
-                        duration: 10,
-                        effect: { hpLoss: 2 }
-                    },
-                    'fuerza': {
-                        name: 'Fuerza Aumentada',
-                        description: 'Aumenta FUE en 3 puntos',
-                        type: 'buff',
-                        color: 'success',
-                        duration: 30,
-                        effect: { FUE: 3 }
-                    },
-                    'proteccion': {
-                        name: 'Protegido',
-                        description: 'Reduce daño recibido en 25%',
-                        type: 'buff',
-                        color: 'info',
-                        duration: 20,
-                        effect: { damageReduction: 0.25 }
-                    }
-                };
-                
-                // Recetas de crafting
-                this.craftingRecipes = [
-                    {
-                        name: 'Poción Mayor de Salud',
-                        ingredients: [
-                            { id: 'Poción de Salud', quantity: 2 },
-                            { id: 'Cristal Mágico', quantity: 1 }
-                        ],
-                        result: 'Poción Mayor de Salud',
-                        successRate: 0.8
-                    },
-                    {
-                        name: 'Armadura de Cuero',
-                        ingredients: [
-                            { id: 'Piel de Lobo', quantity: 3 },
-                            { id: 'Mineral de Hierro', quantity: 1 }
-                        ],
-                        result: 'Armadura de Cuero',
-                        successRate: 0.7
-                    },
-                    {
-                        name: 'Amuleto de Protección',
-                        ingredients: [
-                            { id: 'Cristal Mágico', quantity: 2 },
-                            { id: 'Mineral de Hierro', quantity: 2 }
-                        ],
-                        result: 'Amuleto de Protección',
-                        successRate: 0.6
-                    }
-                ];
-                
-                // Tiendas por bioma
-                this.shops = {
-                    urban: [
-                        'Poción de Salud',
-                        'Antídoto',
-                        'Casco de Cuero',
-                        'Túnica de Aprendiz',
-                        'Guantes de Cuero',
-                        'Anillo de Cobre'
-                    ],
-                    digital: [
-                        'Poción Mayor de Salud',
-                        'Elixir de Energía',
-                        'Yelmo del Sabio',
-                        'Cota de Mallas',
-                        'Guantes del Ladrón',
-                        'Collar del Sabio'
-                    ]
-                };
-                
-                // Avatares
-                this.avatars = {
-                    idle: `    ╔═══════╗
-    ║ ○   ○ ║
-    ║   ▽   ║
-    ║ ╚═∩═╝ ║
-    ╚═══█═══╝`,
-                    combat: `    ╔═══════╗
-    ║ >   < ║
-    ║   ▽   ║
-    ║ ╚═⚔️═╝ ║
-    ╚═══█═══╝`,
-                    damaged: `    ╔═══════╗
-    ║ x   x ║
-    ║   ▽   ║
-    ║ ╚═╦═╝ ║
-    ╚═══█═══╝`,
-                    levelup: `    ╔═══════╗
-    ║ ★   ★ ║
-    ║   ▽   ║
-    ║ ╚═▲═╝ ║
-    ╚═══█═══╝`,
-                    poisoned: `    ╔═══════╗
-    ║ 💀   💀 ║
-    ║   ▽   ║
-    ║ ╚═☠️═╝ ║
-    ╚═══█═══╝`,
-                    buffed: `    ╔═══════╗
-    ║ 🔥   🔥 ║
-    ║   ▽   ║
-    ║ ╚═🌟═╝ ║
-    ╚═══█═══╝`
-                };
-            }
-            
-            init() {
-                this.setupEventListeners();
-                this.loadGameState();
-                this.generateInitialStats();
-                this.initializeQuests();
-                this.initializeSkills();
-                this.initializeLeaderboard();
-                this.setInitialLocation();
-                this.initUI();
-                this.startGameLoop();
-                this.startLocationCycle();
-                this.startAutoSave();
-                this.startStatusEffectLoop();
-                
-                this.log('Sistemas mejorados cargados - v5.0', 'system');
-                this.showNotification('Sistema Mejorado', 'v5.0 cargado con éxito');
-            }
-            
-            // ===== SISTEMA DE ESTADÍSTICAS =====
-            generateInitialStats() {
-                if (Object.keys(this.state.baseStats).length === 0) {
-                    const stats = {};
-                    const statKeys = Object.keys(this.statsData);
-                    
-                    statKeys.forEach(key => {
-                        stats[key] = 8 + Math.floor(Math.random() * 5);
-                    });
-                    
-                    let total = Object.values(stats).reduce((a, b) => a + b, 0);
-                    while (total < 80) {
-                        const randomStat = statKeys[Math.floor(Math.random() * statKeys.length)];
-                        if (stats[randomStat] < 15) {
-                            stats[randomStat]++;
-                            total++;
-                        }
-                    }
-                    
-                    this.state.baseStats = { ...stats };
-                    this.state.stats = { ...stats };
-                    this.calculateMaxHP();
-                    this.state.hp = this.state.maxHp;
-                }
-            }
-            
-            calculateMaxHP() {
-                const baseHP = this.config.baseHP;
-                const vitBonus = this.state.stats.VIT * this.config.hpPerVIT;
-                const levelBonus = (this.state.level - 1) * 10;
-                this.state.maxHp = baseHP + vitBonus + levelBonus;
-            }
-            
-            updateStatsFromEquipment() {
-                this.state.stats = { ...this.state.baseStats };
-                this.state.equipmentStats = {};
-                
-                Object.values(this.state.equipment).forEach(itemId => {
-                    if (itemId) {
-                        const item = this.items[itemId];
-                        if (item && item.stats) {
-                            Object.entries(item.stats).forEach(([stat, value]) => {
-                                this.state.stats[stat] += value;
-                                if (!this.state.equipmentStats[stat]) {
-                                    this.state.equipmentStats[stat] = 0;
-                                }
-                                this.state.equipmentStats[stat] += value;
-                            });
-                        }
-                    }
-                });
-                
-                // Aplicar efectos de estado
-                this.state.statusEffects.forEach(effect => {
-                    const effectData = this.statusEffectsData[effect.type];
-                    if (effectData && effectData.effect) {
-                        Object.entries(effectData.effect).forEach(([key, value]) => {
-                            if (this.state.stats[key] !== undefined) {
-                                this.state.stats[key] += value;
-                            }
-                        });
-                    }
-                });
-                
-                this.calculateMaxHP();
-                this.updateStatsUI();
-                this.state.needsSave = true;
-            }
-            
-            // ===== SISTEMA DE INVENTARIO (Virtualizado) =====
-            addToInventory(itemId, quantity = 1) {
-                const totalItems = this.state.inventory.reduce((sum, item) => sum + item.quantity, 0);
-                if (totalItems + quantity > this.config.inventorySize) {
-                    this.log('Inventario lleno', 'system');
-                    this.showNotification('Inventario', '¡Inventario lleno!');
-                    return false;
-                }
-                
-                const existingItem = this.state.inventory.find(item => item.id === itemId);
-                
-                if (existingItem) {
-                    existingItem.quantity += quantity;
-                } else {
-                    this.state.inventory.push({ id: itemId, quantity: quantity });
-                }
-                
-                this.log(`Obtuviste ${quantity}x ${itemId}`, 'item');
-                this.updateQuestProgress('collection', 1);
-                this.updateInventoryUI();
-                this.state.needsSave = true;
-                return true;
-            }
-            
-            removeFromInventory(itemId, quantity = 1) {
-                const itemIndex = this.state.inventory.findIndex(item => item.id === itemId);
-                
-                if (itemIndex === -1) return false;
-                
-                const item = this.state.inventory[itemIndex];
-                
-                if (item.quantity > quantity) {
-                    item.quantity -= quantity;
-                } else {
-                    this.state.inventory.splice(itemIndex, 1);
-                }
-                
-                this.updateInventoryUI();
-                this.state.needsSave = true;
-                return true;
-            }
-            
-            // ===== SISTEMA DE ORO =====
-            addGold(amount) {
-                this.state.gold += amount;
-                this.log(`+${amount} oro obtenido`, 'gold');
-                this.updateGoldUI();
-                this.state.needsSave = true;
-                
-                // Efecto visual
-                this.elements.goldAmount.classList.add('bounce');
-                setTimeout(() => {
-                    this.elements.goldAmount.classList.remove('bounce');
-                }, 300);
-            }
-            
-            spendGold(amount) {
-                if (this.state.gold >= amount) {
-                    this.state.gold -= amount;
-                    this.log(`-${amount} oro gastado`, 'gold');
-                    this.updateGoldUI();
-                    this.state.needsSave = true;
-                    return true;
-                }
-                this.log('No tienes suficiente oro', 'system');
-                return false;
-            }
-            
-            updateGoldUI() {
-                this.elements.goldAmount.textContent = this.state.gold;
-            }
-            
-            // ===== SISTEMA DE MISIONES =====
-            initializeQuests() {
-                Object.keys(this.questsData).forEach(questId => {
-                    if (!this.state.quests[questId]) {
-                        this.state.quests[questId] = {
-                            ...this.questsData[questId],
-                            progress: 0,
-                            completed: false
-                        };
-                    }
-                });
-            }
-            
-            updateQuestProgress(type, amount = 1) {
-                let questUpdated = false;
-                
-                Object.entries(this.state.quests).forEach(([questId, quest]) => {
-                    if (!quest.completed && quest.type === type) {
-                        quest.progress += amount;
-                        if (quest.progress >= quest.target) {
-                            this.completeQuest(questId);
-                            questUpdated = true;
-                        }
-                    }
-                });
-                
-                if (questUpdated) {
-                    this.updateQuestsUI();
-                    this.state.needsSave = true;
-                }
-            }
-            
-            completeQuest(questId) {
-                const quest = this.state.quests[questId];
-                if (!quest || quest.completed) return;
-                
-                quest.completed = true;
-                this.state.completedQuests.push(questId);
-                
-                // Dar recompensa
-                if (quest.reward.xp) {
-                    this.state.xp += quest.reward.xp;
-                    this.log(`+${quest.reward.xp} XP de misión`, 'quest');
-                }
-                if (quest.reward.gold) {
-                    this.addGold(quest.reward.gold);
-                }
-                if (quest.reward.item) {
-                    this.addToInventory(quest.reward.item, 1);
-                }
-                
-                this.log(`Misión completada: ${quest.name}`, 'quest');
-                this.showNotification('Misión Completada', quest.name);
-                this.updateStatus('quest');
-                
-                setTimeout(() => {
-                    if (!this.state.isInCombat) {
-                        this.updateStatus('idle');
-                    }
-                }, 2000);
-                
-                // Actualizar contador
-                this.elements.questsCompleted.textContent = this.state.completedQuests.length;
-            }
-            
-            showQuestModal() {
-                this.elements.questModal.classList.add('active');
-                this.updateQuestsModal();
-            }
-            
-            hideQuestModal() {
-                this.elements.questModal.classList.remove('active');
-            }
-            
-            updateQuestsModal() {
-                let html = '';
-                
-                Object.entries(this.state.quests).forEach(([questId, quest]) => {
-                    const progressPercent = Math.min(100, (quest.progress / quest.target) * 100);
-                    const status = quest.completed ? 'Completada' : `${quest.progress}/${quest.target}`;
-                    
-                    html += `
-                        <div class="inventory-item" style="margin-bottom: var(--space-md);">
-                            <div class="item-icon">${quest.completed ? '✅' : '📝'}</div>
-                            <div class="item-info">
-                                <div class="item-name">${quest.name}</div>
-                                <div class="item-type">${quest.description}</div>
-                                <div style="margin-top: var(--space-xs); font-size: var(--font-size-xs); color: var(--color-text-2);">
-                                    Progreso: ${status}
-                                </div>
-                                <div style="margin-top: 2px; height: 2px; background: rgba(0, 255, 136, 0.1); border-radius: 1px;">
-                                    <div style="width: ${progressPercent}%; height: 100%; background: var(--color-primary); border-radius: 1px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                this.elements.questList.innerHTML = html || '<div class="empty-panel">No hay misiones disponibles</div>';
-            }
-            
-            // ===== SISTEMA DE HABILIDADES =====
-            initializeSkills() {
-                Object.keys(this.skillsData).forEach(skillId => {
-                    if (!this.state.skills[skillId]) {
-                        this.state.skills[skillId] = {
-                            ...this.skillsData[skillId],
-                            unlocked: false,
-                            level: 0
-                        };
-                    }
-                });
-            }
-            
-            unlockSkill(skillId) {
-                const skill = this.state.skills[skillId];
-                if (!skill || skill.unlocked || this.state.skillPoints < skill.cost || this.state.level < skill.levelRequirement) {
-                    return false;
-                }
-                
-                this.state.skillPoints -= skill.cost;
-                skill.unlocked = true;
-                skill.level = 1;
-                this.state.activeSkills.push(skillId);
-                
-                this.log(`Habilidad desbloqueada: ${skill.name}`, 'skill');
-                this.showNotification('Habilidad Desbloqueada', skill.name);
-                this.state.needsSave = true;
-                
-                // Aplicar efectos de habilidades pasivas
-                if (skill.type === 'passive') {
-                    this.applyPassiveSkill(skillId);
-                }
-                
-                return true;
-            }
-            
-            applyPassiveSkill(skillId) {
-                const skill = this.state.skills[skillId];
-                if (!skill || !skill.unlocked || skill.type !== 'passive') return;
-                
-                // Aplicar efectos pasivos
-                if (skill.effect.hpRegen) {
-                    // El efecto se aplica en el game loop
-                }
-                if (skill.effect.goldBonus) {
-                    // El efecto se aplica al obtener oro
-                }
-                if (skill.effect.damageReduction) {
-                    // El efecto se aplica al recibir daño
-                }
-            }
-            
-            showSkillModal() {
-                this.elements.skillModal.classList.add('active');
-                this.updateSkillModal();
-            }
-            
-            hideSkillModal() {
-                this.elements.skillModal.classList.remove('active');
-            }
-            
-            updateSkillModal() {
-                let html = `
-                    <div style="margin-bottom: var(--space-md); padding: var(--space-sm); background: rgba(0, 0, 0, 0.3); border-radius: var(--radius-sm);">
-                        <div style="color: var(--color-text-1); font-size: var(--font-size-sm); margin-bottom: var(--space-xs);">
-                            Puntos de habilidad: <span style="color: var(--color-primary);">${this.state.skillPoints}</span>
-                        </div>
-                    </div>
-                `;
-                
-                Object.entries(this.state.skills).forEach(([skillId, skill]) => {
-                    const canUnlock = !skill.unlocked && 
-                                     this.state.skillPoints >= skill.cost && 
-                                     this.state.level >= skill.levelRequirement;
-                    
-                    html += `
-                        <div class="inventory-item" style="margin-bottom: var(--space-sm); ${skill.unlocked ? 'border-color: rgba(0, 136, 255, 0.3); background: rgba(0, 136, 255, 0.1);' : ''}">
-                            <div class="item-icon">${skill.unlocked ? '⭐' : '🔒'}</div>
-                            <div class="item-info">
-                                <div class="item-name">${skill.name} ${skill.unlocked ? `(Nivel ${skill.level})` : ''}</div>
-                                <div class="item-type" style="font-size: var(--font-size-xs);">${skill.description}</div>
-                                <div style="margin-top: var(--space-xs); font-size: var(--font-size-xs); color: var(--color-text-2);">
-                                    Nivel requerido: ${skill.levelRequirement} | Costo: ${skill.cost} puntos
-                                </div>
-                            </div>
-                            ${!skill.unlocked ? `
-                                <button onclick="game.unlockSkill('${skillId}')" 
-                                        style="padding: var(--space-xs) var(--space-sm); background: ${canUnlock ? 'var(--color-primary)' : 'var(--color-muted)'}; 
-                                               color: black; border: none; border-radius: var(--radius-sm); font-size: var(--font-size-xs); 
-                                               cursor: ${canUnlock ? 'pointer' : 'not-allowed'};">
-                                    Desbloquear
-                                </button>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                this.elements.skillList.innerHTML = html || '<div class="empty-panel">No hay habilidades disponibles</div>';
-            }
-            
-            // ===== EFECTOS DE ESTADO =====
-            applyStatusEffect(effectType, duration = null) {
-                const effectData = this.statusEffectsData[effectType];
-                if (!effectData) return;
-                
-                const existingEffect = this.state.statusEffects.find(e => e.type === effectType);
-                
-                if (existingEffect) {
-                    // Renovar duración
-                    existingEffect.duration = duration || effectData.duration;
-                    existingEffect.startTime = Date.now();
-                } else {
-                    // Añadir nuevo efecto
-                    this.state.statusEffects.push({
-                        type: effectType,
-                        duration: duration || effectData.duration,
-                        startTime: Date.now()
-                    });
-                    
-                    // Efecto visual en avatar
-                    if (effectType === 'veneno') {
-                        this.updateAvatar('poisoned');
-                    } else if (effectType === 'fuerza' || effectType === 'proteccion') {
-                        this.updateAvatar('buffed');
-                    }
-                    
-                    this.log(`${effectData.name} aplicado`, 'event');
-                }
-                
-                this.updateStatusEffectsUI();
-                this.updateStatsFromEquipment();
-                this.state.needsSave = true;
-            }
-            
-            removeStatusEffect(effectType) {
-                const index = this.state.statusEffects.findIndex(e => e.type === effectType);
-                if (index !== -1) {
-                    this.state.statusEffects.splice(index, 1);
-                    this.updateStatusEffectsUI();
-                    this.updateStatsFromEquipment();
-                    
-                    // Restaurar avatar si no hay efectos
-                    if (this.state.statusEffects.length === 0 && !this.state.isInCombat) {
-                        this.updateAvatar('idle');
-                    }
-                }
-            }
-            
-            startStatusEffectLoop() {
-                this.statusEffectTimer = setInterval(() => {
-                    const now = Date.now();
-                    this.state.statusEffects = this.state.statusEffects.filter(effect => {
-                        const elapsed = (now - effect.startTime) / 1000;
-                        if (elapsed >= effect.duration) {
-                            const effectData = this.statusEffectsData[effect.type];
-                            if (effectData) {
-                                this.log(`${effectData.name} ha expirado`, 'event');
-                            }
-                            return false;
-                        }
-                        return true;
-                    });
-                    
-                    // Aplicar efectos de daño periódico
-                    this.state.statusEffects.forEach(effect => {
-                        const effectData = this.statusEffectsData[effect.type];
-                        if (effectData && effectData.effect && effectData.effect.hpLoss) {
-                            this.state.hp = Math.max(1, this.state.hp - effectData.effect.hpLoss);
-                        }
-                    });
-                    
-                    this.updateStatusEffectsUI();
-                }, 1000);
-            }
-            
-            updateStatusEffectsUI() {
-                const container = this.elements.statusEffects;
-                let html = '';
-                
-                this.state.statusEffects.forEach(effect => {
-                    const effectData = this.statusEffectsData[effect.type];
-                    if (effectData) {
-                        const elapsed = (Date.now() - effect.startTime) / 1000;
-                        const remaining = Math.max(0, effect.duration - elapsed);
-                        const percent = (remaining / effect.duration) * 100;
-                        
-                        html += `
-                            <div class="status-effect ${effect.type}" 
-                                 title="${effectData.name}: ${effectData.description}\nTiempo restante: ${remaining.toFixed(1)}s"
-                                 style="opacity: ${0.5 + (percent / 200)};">
-                                <div style="position: absolute; top: -2px; right: -2px; width: 4px; height: 4px; 
-                                     background: ${percent < 20 ? 'var(--color-danger)' : 'var(--color-success)'}; 
-                                     border-radius: 50%;"></div>
-                            </div>
-                        `;
-                    }
-                });
-                
-                container.innerHTML = html;
-            }
-            
-            // ===== SISTEMA DE CRAFTING =====
-            showCraftModal() {
-                this.elements.craftModal.classList.add('active');
-                this.updateCraftModal();
-            }
-            
-            hideCraftModal() {
-                this.elements.craftModal.classList.remove('active');
-            }
-            
-            updateCraftModal() {
-                let html = '';
-                
-                this.craftingRecipes.forEach((recipe, index) => {
-                    const canCraft = recipe.ingredients.every(ing => {
-                        const item = this.state.inventory.find(i => i.id === ing.id);
-                        return item && item.quantity >= ing.quantity;
-                    });
-                    
-                    html += `
-                        <div class="inventory-item" style="margin-bottom: var(--space-md);">
-                            <div class="item-icon">⚗️</div>
-                            <div class="item-info">
-                                <div class="item-name">${recipe.name}</div>
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-2); margin-top: var(--space-xs);">
-                                    Ingredientes:<br>
-                                    ${recipe.ingredients.map(ing => `${ing.quantity}x ${ing.id}`).join(', ')}
-                                </div>
-                                <div style="font-size: var(--font-size-xs); color: var(--color-success); margin-top: var(--space-xs);">
-                                    Probabilidad: ${Math.floor(recipe.successRate * 100)}%
-                                </div>
-                            </div>
-                            <button onclick="game.craftItem(${index})" 
-                                    style="padding: var(--space-xs) var(--space-sm); background: ${canCraft ? 'var(--color-warning)' : 'var(--color-muted)'}; 
-                                           color: black; border: none; border-radius: var(--radius-sm); font-size: var(--font-size-xs); 
-                                           cursor: ${canCraft ? 'pointer' : 'not-allowed'};">
-                                Craft
+                        <!-- Botones de acción -->
+                        <div class="button-group">
+                            <button type="button" id="scan-button-text" class="btn-icon" title="Scan QR">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                            <button type="button" id="paste-qr-button" class="btn-icon" title="Paste QR text">
+                                <i class="fas fa-paste"></i>
+                            </button>
+                            <button type="button" id="upload-qr-button" class="btn-icon" title="Upload QR Image">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                            <button type="button" id="upload-file-button" class="btn-icon" title="Upload File">
+                                <i class="fas fa-file"></i>
                             </button>
                         </div>
-                    `;
-                });
-                
-                this.elements.craftList.innerHTML = html || '<div class="empty-panel">No hay recetas disponibles</div>';
-            }
-            
-            craftItem(recipeIndex) {
-                const recipe = this.craftingRecipes[recipeIndex];
-                if (!recipe) return;
-                
-                // Verificar ingredientes
-                const missingIngredients = recipe.ingredients.filter(ing => {
-                    const item = this.state.inventory.find(i => i.id === ing.id);
-                    return !item || item.quantity < ing.quantity;
-                });
-                
-                if (missingIngredients.length > 0) {
-                    this.log('Faltan ingredientes para craftear', 'system');
-                    return;
-                }
-                
-                // Consumir ingredientes
-                recipe.ingredients.forEach(ing => {
-                    this.removeFromInventory(ing.id, ing.quantity);
-                });
-                
-                // Intentar craftear
-                const success = Math.random() < recipe.successRate;
-                
-                if (success) {
-                    this.addToInventory(recipe.result, 1);
-                    this.log(`¡Craft exitoso! Obtuviste ${recipe.result}`, 'item');
-                    this.updateQuestProgress('crafting', 1);
-                    this.showNotification('Crafting Exitoso', recipe.result);
-                } else {
-                    this.log('El crafting falló', 'system');
-                    this.showNotification('Crafting Fallido', 'Intenta de nuevo');
-                }
-                
-                this.updateCraftModal();
-            }
-            
-            // ===== SISTEMA DE TIENDA =====
-            showShopModal() {
-                const biome = this.biomes[this.state.location];
-                if (!biome || !biome.shop) {
-                    this.log('No hay tienda en esta ubicación', 'system');
-                    return;
-                }
-                
-                this.elements.shopModal.classList.add('active');
-                this.updateShopModal();
-            }
-            
-            hideShopModal() {
-                this.elements.shopModal.classList.remove('active');
-            }
-            
-            updateShopModal() {
-                const shopItems = this.shops[this.state.location] || [];
-                let html = '';
-                
-                shopItems.forEach(itemId => {
-                    const item = this.items[itemId];
-                    if (!item || !item.shopPrice) return;
-                    
-                    const canAfford = this.state.gold >= item.shopPrice;
-                    
-                    html += `
-                        <div class="inventory-item" style="margin-bottom: var(--space-sm);">
-                            <div class="item-icon">${item.icon || '📦'}</div>
-                            <div class="item-info">
-                                <div class="item-name">${itemId}</div>
-                                <div class="item-type ${item.type}">${this.getTypeName(item.type)}</div>
-                                <div style="margin-top: var(--space-xs); font-size: var(--font-size-xs); color: var(--color-text-2);">
-                                    ${item.desc}
-                                </div>
-                            </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-xs);">
-                                <div style="color: var(--color-gold); font-size: var(--font-size-sm);">
-                                    ${item.shopPrice} oro
-                                </div>
-                                <button onclick="game.buyItem('${itemId}')" 
-                                        style="padding: var(--space-xs) var(--space-sm); background: ${canAfford ? 'var(--color-success)' : 'var(--color-muted)'}; 
-                                               color: black; border: none; border-radius: var(--radius-sm); font-size: var(--font-size-xs); 
-                                               cursor: ${canAfford ? 'pointer' : 'not-allowed'};">
-                                    Comprar
+
+                        <div class="action-buttons compact">
+                            <button type="submit" id="send-button" class="btn-primary compact-btn">
+                                <i class="fas fa-lock"></i> Encrypt
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- MODO ARCHIVO (dentro del panel mensaje) -->
+            <div id="file-mode" class="file-mode hidden">
+                <div class="card file-card">
+                    <!-- Passphrase para archivo -->
+                    <div class="input-group">
+                        <label class="input-label" for="file-passphrase-message">Passphrase (for file encryption)</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-key icon-left"></i>
+                            <input type="password" id="file-passphrase-message" placeholder="Minimum 12 characters" required>
+                            <div class="right-icons">
+                                <button type="button" class="icon-right toggle-password" data-target="file-passphrase-message">
+                                    <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                         </div>
-                    `;
-                });
-                
-                this.elements.shopList.innerHTML = html || '<div class="empty-panel">La tienda está vacía</div>';
-            }
-            
-            buyItem(itemId) {
-                const item = this.items[itemId];
-                if (!item || !item.shopPrice) return;
-                
-                if (this.spendGold(item.shopPrice)) {
-                    this.addToInventory(itemId, 1);
-                    this.log(`Compraste ${itemId}`, 'item');
-                    this.updateShopModal();
-                }
-            }
-            
-            // ===== LEADERBOARD =====
-            initializeLeaderboard() {
-                const saved = localStorage.getItem('autonomus_leaderboard');
-                if (saved) {
-                    try {
-                        this.state.leaderboard = JSON.parse(saved);
-                    } catch (e) {
-                        this.state.leaderboard = [];
-                    }
-                }
-            }
-            
-            saveToLeaderboard() {
-                const entry = {
-                    name: `Jugador_${Math.floor(Math.random() * 1000)}`,
-                    level: this.state.level,
-                    enemies: this.state.enemiesDefeated,
-                    quests: this.state.completedQuests.length,
-                    gold: this.state.gold,
-                    time: Date.now()
-                };
-                
-                this.state.leaderboard.push(entry);
-                this.state.leaderboard.sort((a, b) => b.level - a.level || b.enemies - a.enemies);
-                this.state.leaderboard = this.state.leaderboard.slice(0, 10);
-                
-                localStorage.setItem('autonomus_leaderboard', JSON.stringify(this.state.leaderboard));
-                this.state.needsSave = true;
-            }
-            
-            showLeaderboardModal() {
-                this.elements.leaderboardModal.classList.add('active');
-                this.updateLeaderboardModal();
-            }
-            
-            hideLeaderboardModal() {
-                this.elements.leaderboardModal.classList.remove('active');
-            }
-            
-            updateLeaderboardModal() {
-                let html = '';
-                
-                this.state.leaderboard.forEach((entry, index) => {
-                    const date = new Date(entry.time).toLocaleDateString();
-                    
-                    html += `
-                        <div class="inventory-item" style="margin-bottom: var(--space-xs); ${index < 3 ? 'border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.1);' : ''}">
-                            <div class="item-icon">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}</div>
-                            <div class="item-info">
-                                <div class="item-name">${entry.name}</div>
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-2);">
-                                    Nivel ${entry.level} | Enemigos: ${entry.enemies} | Misiones: ${entry.quests} | Oro: ${entry.gold}
-                                </div>
-                                <div style="font-size: var(--font-size-xs); color: var(--color-text-2); margin-top: 2px;">
-                                    ${date}
-                                </div>
-                            </div>
+                    </div>
+
+                    <!-- Zona de arrastre -->
+                    <div id="file-drop-zone-message" class="file-area" tabindex="0" role="button">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Drag & drop a file here or click to select</p>
+                        <p class="hint">Max size: 10 MB</p>
+                        <input type="file" id="file-input-message" class="hidden-input">
+                    </div>
+                    <button id="select-file-button-message" class="btn-secondary">Select File</button>
+
+                    <!-- Información del archivo -->
+                    <div id="file-info-message" class="file-info hidden">
+                        <i class="fas fa-file"></i>
+                        <span id="file-name-message"></span>
+                        <span id="file-size-message"></span>
+                        <button id="clear-file-message" class="btn-icon small" title="Remove file">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Opciones -->
+                    <div class="options-grid">
+                        <div class="input-group">
+                            <label class="input-label" for="qr-format-message">Output Format</label>
+                            <select id="qr-format-message">
+                                <option value="gif">Animated GIF</option>
+                                <option value="png-matrix">PNG Matrix</option>
+                            </select>
                         </div>
-                    `;
-                });
-                
-                this.elements.leaderboardList.innerHTML = html || '<div class="empty-panel">No hay registros en el leaderboard</div>';
-            }
-            
-            // ===== INTERFAZ DE USUARIO MEJORADA =====
-            initUI() {
-                this.updateStatsUI();
-                this.updateLocationUI();
-                this.updateProgressionUI();
-                this.updateInventoryUI();
-                this.updateEquipmentUI();
-                this.updateGoldUI();
-                this.updateQuestsUI();
-                this.updateStatus('idle');
-                this.updateAvatar('idle');
-            }
-            
-            updateUI() {
-                const xpPercent = (this.state.xp / this.state.xpToNextLevel) * 100;
-                this.elements.xpFill.style.width = `${xpPercent}%`;
-                
-                const hpPercent = (this.state.hp / this.state.maxHp) * 100;
-                this.elements.hpFill.style.width = `${hpPercent}%`;
-                
-                this.elements.xpText.textContent = `${Math.floor(this.state.xp)}/${this.state.xpToNextLevel}`;
-                this.elements.levelText.textContent = `NIVEL ${this.state.level}`;
-                this.elements.enemiesDefeated.textContent = this.state.enemiesDefeated;
-                this.elements.questsCompleted.textContent = this.state.completedQuests.length;
-            }
-            
-            updateQuestsUI() {
-                // Contador de misiones completadas
-                this.elements.questsCompleted.textContent = this.state.completedQuests.length;
-                
-                // Indicador de estado si hay misiones activas
-                const activeQuests = Object.values(this.state.quests).filter(q => !q.completed && q.progress > 0);
-                if (activeQuests.length > 0 && this.elements.statusDot.classList.contains('idle')) {
-                    this.updateStatus('quest');
-                }
-            }
-            
-            // ===== TOOLTIPS MEJORADOS (Con debouncing) =====
-            showStatTooltip(statKey, baseValue, equipmentBonus) {
-                if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
-                
-                this.tooltipTimeout = setTimeout(() => {
-                    const stat = this.state.stats[statKey];
-                    const statData = this.statsData[statKey];
-                    
-                    let tooltipHTML = `
-                        <div class="tooltip-title">
-                            ${statData.name}: ${stat}
+                        <div id="matrix-cols-group-message" class="input-group" style="display: none;">
+                            <label class="input-label" for="matrix-cols-message">Matrix Columns</label>
+                            <input type="number" id="matrix-cols-message" min="1" max="10" value="3">
                         </div>
-                        <div class="tooltip-desc">${statData.desc}</div>
-                    `;
-                    
-                    if (equipmentBonus > 0) {
-                        tooltipHTML += `
-                            <div class="tooltip-stats">
-                                Base: ${baseValue}<br>
-                                Equipo: +${equipmentBonus}
-                            </div>
-                        `;
-                    }
-                    
-                    this.showTooltip(tooltipHTML);
-                }, 150);
-            }
-            
-            showItemTooltip(itemId) {
-                if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
-                
-                this.tooltipTimeout = setTimeout(() => {
-                    const item = this.items[itemId];
-                    if (!item) return;
-                    
-                    let tooltipHTML = `
-                        <div class="tooltip-title">
-                            ${item.icon || '📦'} ${itemId}
+                        <div class="input-group">
+                            <label class="input-label" for="chunk-size-message">Chunk Size (characters)</label>
+                            <input type="number" id="chunk-size-message" min="500" max="2500" value="1800">
                         </div>
-                        <div class="tooltip-desc">${item.desc}</div>
-                    `;
-                    
-                    if (item.stats) {
-                        tooltipHTML += `<div class="tooltip-stats">`;
-                        Object.entries(item.stats).forEach(([stat, value]) => {
-                            tooltipHTML += `${this.statsData[stat].name}: +${value}<br>`;
-                        });
-                        tooltipHTML += `</div>`;
-                    }
-                    
-                    if (item.effect && item.type === 'consumable') {
-                        tooltipHTML += `<div class="tooltip-stats">`;
-                        if (item.effect.hp) tooltipHTML += `HP: +${item.effect.hp}<br>`;
-                        if (item.effect.energy) tooltipHTML += `Energía: +${item.effect.energy}<br>`;
-                        if (item.effect.cure) tooltipHTML += `Cura: ${item.effect.cure}<br>`;
-                        tooltipHTML += `</div>`;
-                    }
-                    
-                    tooltipHTML += `<div style="color: var(--color-text-2); font-size: 9px; margin-top: 4px;">Click para ${item.type === 'equipment' ? 'equipar' : 'usar'}</div>`;
-                    
-                    this.showTooltip(tooltipHTML);
-                }, 150);
-            }
-            
-            showTooltip(content) {
-                this.elements.tooltip.innerHTML = content;
-                this.elements.tooltip.classList.add('show');
-                this.positionTooltip();
-            }
-            
-            hideTooltip() {
-                if (this.tooltipTimeout) {
-                    clearTimeout(this.tooltipTimeout);
-                    this.tooltipTimeout = null;
-                }
-                this.elements.tooltip.classList.remove('show');
-            }
-            
-            positionTooltip() {
-                const tooltip = this.elements.tooltip;
-                const padding = 10;
-                
-                let x = this.mouseX + padding;
-                let y = this.mouseY + padding;
-                
-                const tooltipRect = tooltip.getBoundingClientRect();
-                const windowWidth = window.innerWidth;
-                const windowHeight = window.innerHeight;
-                
-                if (x + tooltipRect.width > windowWidth) {
-                    x = windowWidth - tooltipRect.width - padding;
-                }
-                
-                if (y + tooltipRect.height > windowHeight) {
-                    y = windowHeight - tooltipRect.height - padding;
-                }
-                
-                tooltip.style.left = `${x}px`;
-                tooltip.style.top = `${y}px`;
-            }
-            
-            // ===== NOTIFICACIONES =====
-            showNotification(title, message) {
-                if (this.notificationTimeout) {
-                    clearTimeout(this.notificationTimeout);
-                    this.elements.notification.classList.remove('show');
-                }
-                
-                this.elements.notification.innerHTML = `
-                    <div class="notification-title">${title}</div>
-                    <div class="notification-message">${message}</div>
-                `;
-                
-                this.elements.notification.classList.add('show');
-                
-                this.notificationTimeout = setTimeout(() => {
-                    this.elements.notification.classList.remove('show');
-                }, 3000);
-            }
-            
-            // ===== SISTEMA DE JUEGO MEJORADO =====
-            setInitialLocation() {
-                const locations = Object.keys(this.biomes);
-                this.state.location = locations[Math.floor(Math.random() * locations.length)];
-                this.updateLocationUI();
-            }
-            
-            startGameLoop() {
-                let lastTime = performance.now();
-                
-                const gameLoop = (currentTime) => {
-                    const deltaTime = (currentTime - lastTime) / 1000;
-                    this.state.gameTime += deltaTime;
-                    lastTime = currentTime;
-                    
-                    // Regeneración (mejorada con habilidades)
-                    if (!this.state.isInCombat) {
-                        let regenRate = this.config.regenRate;
-                        
-                        // Aplicar habilidad de regeneración
-                        if (this.state.skills.regeneracion && this.state.skills.regeneracion.unlocked) {
-                            regenRate += this.skillsData.regeneracion.effect.hpRegen;
-                        }
-                        
-                        const regen = this.state.maxHp * regenRate * deltaTime;
-                        this.state.hp = Math.min(this.state.maxHp, this.state.hp + regen);
-                    }
-                    
-                    // Eventos aleatorios
-                    if (!this.state.isInCombat && !this.state.currentEvent) {
-                        if (Math.random() < this.config.combatChance * deltaTime * 60) {
-                            this.triggerCombat();
-                        }
-                        
-                        // Evento de encuentro aleatorio
-                        if (Math.random() < this.config.eventChance * deltaTime * 60) {
-                            this.triggerRandomEvent();
-                        }
-                    }
-                    
-                    // Actualizar UI
-                    this.updateUI();
-                    
-                    this.animationFrame = requestAnimationFrame(gameLoop);
-                };
-                
-                this.animationFrame = requestAnimationFrame(gameLoop);
-            }
-            
-            startLocationCycle() {
-                const changeLocation = () => {
-                    const locations = Object.keys(this.biomes);
-                    let newLocation;
-                    do {
-                        newLocation = locations[Math.floor(Math.random() * locations.length)];
-                    } while (newLocation === this.state.location && locations.length > 1);
-                    
-                    this.state.location = newLocation;
-                    this.updateLocationUI();
-                    
-                    this.log(`Viajando a ${this.biomes[newLocation].name}`, 'event');
-                    
-                    this.locationTimer = setTimeout(changeLocation, 120000 + Math.random() * 180000);
-                };
-                
-                this.locationTimer = setTimeout(changeLocation, 60000);
-            }
-            
-            triggerRandomEvent() {
-                const events = [
-                    {
-                        name: 'Tesoro Escondido',
-                        action: () => {
-                            const goldFound = Math.floor(Math.random() * 20) + 5;
-                            this.addGold(goldFound);
-                            this.log(`¡Encontraste un tesoro escondido! +${goldFound} oro`, 'gold');
-                        }
-                    },
-                    {
-                        name: 'Fuegos Faturos',
-                        action: () => {
-                            this.applyStatusEffect('veneno');
-                            this.log('¡Pisaste fuegos fatuos! Has sido envenenado', 'event');
-                        }
-                    },
-                    {
-                        name: 'Manantial Curativo',
-                        action: () => {
-                            const healAmount = Math.floor(this.state.maxHp * 0.3);
-                            this.state.hp = Math.min(this.state.maxHp, this.state.hp + healAmount);
-                            this.log(`¡Encontraste un manantial curativo! +${healAmount} HP`, 'event');
-                        }
-                    },
-                    {
-                        name: 'Estatuas Antiguas',
-                        action: () => {
-                            this.applyStatusEffect('fuerza', 45);
-                            this.log('¡Las estatuas antiguas te otorgan fuerza temporal!', 'event');
-                        }
-                    }
-                ];
-                
-                const event = events[Math.floor(Math.random() * events.length)];
-                event.action();
-            }
-            
-            triggerCombat() {
-                if (this.state.isInCombat) return;
-                
-                const biome = this.biomes[this.state.location];
-                const enemies = Object.keys(this.enemies);
-                const enemyName = enemies[Math.floor(Math.random() * enemies.length)];
-                const enemy = this.enemies[enemyName];
-                
-                this.state.isInCombat = true;
-                this.state.currentEnemy = {
-                    name: enemyName,
-                    hp: enemy.hp,
-                    maxHp: enemy.hp,
-                    attack: enemy.attack,
-                    defense: enemy.defense,
-                    xp: enemy.xp,
-                    gold: enemy.gold
-                };
-                
-                this.updateStatus('combat');
-                this.updateAvatar('combat');
-                this.log(`¡${enemyName} aparece! [HP: ${enemy.hp}]`, 'combat');
-                
-                setTimeout(() => {
-                    if (this.state.isInCombat) {
-                        const playerWins = Math.random() > 0.3;
-                        this.endCombat(playerWins);
-                    }
-                }, 5000 + Math.random() * 5000);
-            }
-            
-            endCombat(victory) {
-                if (!this.state.isInCombat) return;
-                
-                this.state.isInCombat = false;
-                
-                if (victory && this.state.currentEnemy) {
-                    const enemy = this.state.currentEnemy;
-                    const xpGained = enemy.xp;
-                    
-                    this.state.xp += xpGained;
-                    this.state.enemiesDefeated++;
-                    
-                    this.log(`¡${enemy.name} derrotado! +${xpGained} XP`, 'combat');
-                    this.updateQuestProgress('combat', 1);
-                    
-                    // Oro del enemigo (mejorado con habilidades)
-                    if (Math.random() < this.config.goldDropChance) {
-                        let goldAmount = Math.floor(Math.random() * (enemy.gold[1] - enemy.gold[0] + 1)) + enemy.gold[0];
-                        
-                        // Aplicar bonus de habilidad
-                        if (this.state.skills.cazador_de_fortunas && this.state.skills.cazador_de_fortunas.unlocked) {
-                            goldAmount = Math.floor(goldAmount * (1 + this.skillsData.cazador_de_fortunas.effect.goldBonus));
-                        }
-                        
-                        this.addGold(goldAmount);
-                    }
-                    
-                    // Drop de item
-                    if (Math.random() < this.config.itemDropChance) {
-                        const items = Object.keys(this.items).filter(id => 
-                            this.items[id].type === 'material' || 
-                            (this.items[id].type === 'consumable' && Math.random() > 0.5)
-                        );
-                        
-                        if (items.length > 0) {
-                            const randomItem = items[Math.floor(Math.random() * items.length)];
-                            this.addToInventory(randomItem, 1);
-                        }
-                    }
-                    
-                    this.checkLevelUp();
-                } else {
-                    const damage = Math.floor(Math.random() * 30) + 10;
-                    
-                    // Aplicar reducción de daño de habilidades
-                    let damageTaken = damage;
-                    if (this.state.skills.piel_endurecida && this.state.skills.piel_endurecida.unlocked) {
-                        damageTaken = Math.floor(damage * (1 - this.skillsData.piel_endurecida.effect.damageReduction));
-                    }
-                    
-                    this.state.hp = Math.max(1, this.state.hp - damageTaken);
-                    this.state.totalDamage += damageTaken;
-                    this.log(`¡Derrotado! Perdiste ${damageTaken} HP`, 'combat');
-                }
-                
-                this.state.currentEnemy = null;
-                this.updateStatus('idle');
-                this.updateAvatar(this.state.hp < this.state.maxHp * 0.5 ? 'damaged' : 'idle');
-                this.state.needsSave = true;
-            }
-            
-            checkLevelUp() {
-                while (this.state.xp >= this.state.xpToNextLevel) {
-                    this.levelUp();
-                }
-            }
-            
-            levelUp() {
-                this.state.xp -= this.state.xpToNextLevel;
-                this.state.level++;
-                this.state.xpToNextLevel = Math.floor(
-                    this.config.baseXP * Math.pow(this.config.xpMultiplier, this.state.level - 1)
-                );
-                
-                // Mejorar stats base
-                const statKeys = Object.keys(this.state.baseStats);
-                const statsToImprove = statKeys
-                    .sort(() => Math.random() - 0.5)
-                    .slice(0, 2);
-                
-                statsToImprove.forEach(stat => {
-                    this.state.baseStats[stat]++;
-                });
-                
-                // Otorgar puntos de habilidad
-                this.state.skillPoints += this.config.skillPointsPerLevel;
-                
-                // Recalcular stats con equipo
-                this.updateStatsFromEquipment();
-                
-                // Restaurar HP
-                this.calculateMaxHP();
-                this.state.hp = this.state.maxHp;
-                
-                // Animación
-                this.updateStatus('level-up');
-                this.updateAvatar('levelup');
-                this.log(`¡NIVEL ${this.state.level} ALCANZADO! +${this.config.skillPointsPerLevel} punto(s) de habilidad`, 'level');
-                this.showNotification('¡Subiste de Nivel!', `Nivel ${this.state.level}`);
-                
-                setTimeout(() => {
-                    if (!this.state.isInCombat) {
-                        this.updateStatus('idle');
-                        this.updateAvatar('idle');
-                    }
-                }, 3000);
-                
-                this.state.needsSave = true;
-            }
-            
-            // ===== EVENT LISTENERS MEJORADOS =====
-            setupEventListeners() {
-                // Mouse para tooltips
-                document.addEventListener('mousemove', (e) => {
-                    this.mouseX = e.clientX;
-                    this.mouseY = e.clientY;
-                    
-                    if (this.elements.tooltip.classList.contains('show')) {
-                        this.positionTooltip();
-                    }
-                });
-                
-                // Clic fuera de tooltips para ocultar
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.tooltip') && this.elements.tooltip.classList.contains('show')) {
-                        this.hideTooltip();
-                    }
-                });
-                
-                // Teclado mejorado
-                document.addEventListener('keydown', (e) => {
-                    // Comandos de desarrollo
-                    if (e.ctrlKey) {
-                        switch(e.key.toLowerCase()) {
-                            case 'c': this.triggerCombat(); break;
-                            case 'l': 
-                                this.state.xp = this.state.xpToNextLevel - 1;
-                                this.checkLevelUp();
-                                break;
-                            case 'i': 
-                                const items = Object.keys(this.items);
-                                const randomItem = items[Math.floor(Math.random() * items.length)];
-                                this.addToInventory(randomItem, 1);
-                                break;
-                            case 'e': 
-                                const equipmentItems = Object.keys(this.items).filter(id => 
-                                    this.items[id].type === 'equipment'
-                                );
-                                if (equipmentItems.length > 0) {
-                                    const randomEquip = equipmentItems[Math.floor(Math.random() * equipmentItems.length)];
-                                    this.addToInventory(randomEquip, 1);
-                                    this.equipItem(randomEquip);
-                                }
-                                break;
-                            case 'g': this.addGold(100); break;
-                            case 'q': this.showQuestModal(); break;
-                            case 's': this.showSkillModal(); break;
-                            case 'r': this.showCraftModal(); break;
-                            case 't': this.showShopModal(); break;
-                            case 'b': this.showLeaderboardModal(); break;
-                        }
-                    }
-                    
-                    // Sistema
-                    if (e.key === 'Escape') {
-                        this.showSystemInfo();
-                        
-                        // Cerrar modales
-                        this.hideQuestModal();
-                        this.hideSkillModal();
-                        this.hideCraftModal();
-                        this.hideShopModal();
-                        this.hideLeaderboardModal();
-                    }
-                    
-                    // Números para acciones rápidas
-                    if (e.key >= '1' && e.key <= '4' && this.state.isInCombat) {
-                        this.quickCombatAction(parseInt(e.key) - 1);
-                    }
-                });
-                
-                // Clic en avatar
-                this.elements.avatar.addEventListener('click', () => {
-                    this.showCharacterInfo();
-                    this.elements.avatar.classList.add('bounce');
-                    setTimeout(() => {
-                        this.elements.avatar.classList.remove('bounce');
-                    }, 300);
-                });
-                
-                // Scroll del inventario
-                this.elements.inventoryList.addEventListener('scroll', (e) => {
-                    this.inventoryScrollTop = e.target.scrollTop;
-                    this.updateInventoryUI();
-                });
-                
-                // Manejo de errores
-                window.addEventListener('error', (e) => {
-                    this.log(`[ERROR] ${e.message}`, 'system');
-                    console.error('Error capturado:', e);
-                });
-            }
-            
-            quickCombatAction(actionIndex) {
-                const actions = ['ATACAR', 'DEFENDER', 'USAR ITEM', 'HUIR'];
-                if (actionIndex >= 0 && actionIndex < actions.length) {
-                    this.log(`Acción rápida: ${actions[actionIndex]}`, 'combat');
-                }
-            }
-            
-            // ===== SISTEMAS DE EQUIPO Y USO DE ITEMS (Mantenidos) =====
-            useItem(itemId) {
-                const item = this.items[itemId];
-                if (!item) return false;
-                
-                switch(item.type) {
-                    case 'consumable':
-                        return this.useConsumable(itemId);
-                    case 'equipment':
-                        return this.equipItem(itemId);
-                    case 'key':
-                    case 'special':
-                        this.log(`Usaste ${itemId}: ${item.desc}`, 'item');
-                        this.removeFromInventory(itemId, 1);
-                        return true;
-                    default:
-                        return false;
-                }
-            }
-            
-            useConsumable(itemId) {
-                const item = this.items[itemId];
-                if (!item || item.type !== 'consumable') return false;
-                
-                let effectApplied = false;
-                
-                if (item.effect.hp) {
-                    this.state.hp = Math.min(this.state.maxHp, this.state.hp + item.effect.hp);
-                    this.log(`${itemId} restaura ${item.effect.hp} HP`, 'item');
-                    effectApplied = true;
-                }
-                
-                if (item.effect.cure === 'poison') {
-                    this.removeStatusEffect('veneno');
-                    this.log(`${itemId} cura el veneno`, 'item');
-                    effectApplied = true;
-                }
-                
-                if (effectApplied) {
-                    this.removeFromInventory(itemId, 1);
-                    this.updateUI();
-                    return true;
-                }
-                
-                return false;
-            }
-            
-            equipItem(itemId) {
-                const item = this.items[itemId];
-                if (!item || item.type !== 'equipment') return false;
-                
-                const slot = item.slot;
-                const currentItem = this.state.equipment[slot];
-                
-                if (currentItem) {
-                    this.unequipItem(slot);
-                }
-                
-                if (this.removeFromInventory(itemId, 1)) {
-                    this.state.equipment[slot] = itemId;
-                    this.updateStatsFromEquipment();
-                    this.updateEquipmentUI();
-                    this.log(`Equipaste ${itemId} en ${slot}`, 'item');
-                    this.elements.equipmentSlots.classList.add('shake');
-                    setTimeout(() => {
-                        this.elements.equipmentSlots.classList.remove('shake');
-                    }, 500);
-                    return true;
-                }
-                
-                return false;
-            }
-            
-            unequipItem(slot) {
-                const itemId = this.state.equipment[slot];
-                if (!itemId) return false;
-                
-                if (this.addToInventory(itemId, 1)) {
-                    this.state.equipment[slot] = null;
-                    this.updateStatsFromEquipment();
-                    this.updateEquipmentUI();
-                    this.log(`Desequipaste ${itemId} de ${slot}`, 'item');
-                    return true;
-                }
-                
-                return false;
-            }
-            
-            // ===== PERSISTENCIA MEJORADA =====
-            startAutoSave() {
-                this.saveInterval = setInterval(() => {
-                    this.saveGameState();
-                }, this.config.autoSaveInterval);
-            }
-            
-            saveGameState() {
-                if (!this.state.needsSave) return;
-                
-                const saveData = {
-                    version: '5.0',
-                    level: this.state.level,
-                    xp: this.state.xp,
-                    xpToNextLevel: this.state.xpToNextLevel,
-                    baseStats: this.state.baseStats,
-                    maxHp: this.state.maxHp,
-                    hp: this.state.hp,
-                    location: this.state.location,
-                    enemiesDefeated: this.state.enemiesDefeated,
-                    totalDamage: this.state.totalDamage,
-                    decisionsMade: this.state.decisionsMade,
-                    gameTime: this.state.gameTime,
-                    gold: this.state.gold,
-                    skillPoints: this.state.skillPoints,
-                    inventory: this.state.inventory,
-                    equipment: this.state.equipment,
-                    quests: this.state.quests,
-                    completedQuests: this.state.completedQuests,
-                    skills: this.state.skills,
-                    activeSkills: this.state.activeSkills,
-                    statusEffects: this.state.statusEffects,
-                    savedAt: Date.now()
-                };
-                
-                try {
-                    // Intentar compresión si LZString está disponible
-                    const dataString = JSON.stringify(saveData);
-                    const compressed = LZString.compressToUTF16(dataString);
-                    localStorage.setItem('autonomusAvatar_v5', compressed);
-                    console.log('Juego guardado (comprimido)');
-                } catch (e) {
-                    console.error('Error guardando:', e);
-                    // Fallback sin compresión
-                    try {
-                        localStorage.setItem('autonomusAvatar_v5', JSON.stringify(saveData));
-                    } catch (e2) {
-                        console.error('Error en fallback:', e2);
-                    }
-                }
-                
-                this.state.needsSave = false;
-            }
-            
-            loadGameState() {
-                try {
-                    const saved = localStorage.getItem('autonomusAvatar_v5');
-                    let saveData;
-                    
-                    if (saved) {
-                        // Intentar descomprimir
-                        try {
-                            saveData = JSON.parse(LZString.decompressFromUTF16(saved));
-                        } catch (e) {
-                            // Fallback: asumir que no está comprimido
-                            saveData = JSON.parse(saved);
-                        }
-                        
-                        if (saveData && (saveData.version === '5.0' || saveData.version === '4.0')) {
-                            // Cargar datos básicos
-                            this.state.level = saveData.level || 1;
-                            this.state.xp = saveData.xp || 0;
-                            this.state.xpToNextLevel = saveData.xpToNextLevel || this.config.baseXP;
-                            this.state.baseStats = saveData.baseStats || {};
-                            this.state.maxHp = saveData.maxHp || this.config.baseHP;
-                            this.state.hp = saveData.hp || this.state.maxHp;
-                            this.state.location = saveData.location || 'unknown';
-                            this.state.enemiesDefeated = saveData.enemiesDefeated || 0;
-                            this.state.totalDamage = saveData.totalDamage || 0;
-                            this.state.decisionsMade = saveData.decisionsMade || 0;
-                            this.state.gameTime = saveData.gameTime || 0;
-                            this.state.gold = saveData.gold || 0;
-                            this.state.skillPoints = saveData.skillPoints || 0;
-                            this.state.inventory = saveData.inventory || [];
-                            this.state.equipment = saveData.equipment || {
-                                cabeza: null,
-                                torso: null,
-                                manos: null,
-                                accesorio: null
-                            };
-                            
-                            // Cargar nuevos sistemas (v5.0)
-                            if (saveData.version === '5.0') {
-                                this.state.quests = saveData.quests || {};
-                                this.state.completedQuests = saveData.completedQuests || [];
-                                this.state.skills = saveData.skills || {};
-                                this.state.activeSkills = saveData.activeSkills || [];
-                                this.state.statusEffects = saveData.statusEffects || [];
-                            } else {
-                                // Inicializar nuevos sistemas para migración desde v4.0
-                                this.initializeQuests();
-                                this.initializeSkills();
-                            }
-                            
-                            // Calcular stats con equipo
-                            this.updateStatsFromEquipment();
-                            
-                            this.log('Partida v' + saveData.version + ' cargada', 'system');
-                            return true;
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error cargando:', e);
-                }
-                return false;
-            }
-            
-            // ===== INFO MEJORADA =====
-            showCharacterInfo() {
-                this.log('=== INFORMACIÓN MEJORADA ===', 'system');
-                this.log(`Nivel: ${this.state.level}`, 'system');
-                this.log(`HP: ${Math.floor(this.state.hp)}/${this.state.maxHp}`, 'system');
-                this.log(`XP: ${Math.floor(this.state.xp)}/${this.state.xpToNextLevel}`, 'system');
-                this.log(`Oro: ${this.state.gold}`, 'system');
-                this.log(`Puntos habilidad: ${this.state.skillPoints}`, 'system');
-                
-                const equippedCount = Object.values(this.state.equipment).filter(x => x !== null).length;
-                const totalItems = this.state.inventory.reduce((sum, item) => sum + item.quantity, 0);
-                
-                this.log(`Equipo: ${equippedCount}/4 slots`, 'system');
-                this.log(`Inventario: ${totalItems}/${this.config.inventorySize} items`, 'system');
-                this.log(`Enemigos: ${this.state.enemiesDefeated}`, 'system');
-                this.log(`Misiones: ${this.state.completedQuests.length}/${Object.keys(this.questsData).length}`, 'system');
-                this.log(`Tiempo: ${Math.floor(this.state.gameTime/60)}m`, 'system');
-            }
-            
-            showSystemInfo() {
-                this.log('=== SISTEMA v5.0 ===', 'system');
-                this.log('Controles:', 'system');
-                this.log('- Click items: Usar/Equipar', 'system');
-                this.log('- Mouse sobre stats/items: Tooltips', 'system');
-                this.log('- Click avatar: Info', 'system');
-                this.log('- ESC: Este menú', 'system');
-                this.log('Nuevos Sistemas:', 'system');
-                this.log('- Q: Misiones', 'system');
-                this.log('- S: Habilidades', 'system');
-                this.log('- R: Crafting', 'system');
-                this.log('- T: Tienda', 'system');
-                this.log('- B: Leaderboard', 'system');
-                this.log('Dev (Ctrl + tecla):', 'system');
-                this.log('- C: Combate', 'system');
-                this.log('- L: Level up', 'system');
-                this.log('- I: Item random', 'system');
-                this.log('- E: Equipo random', 'system');
-                this.log('- G: +100 oro', 'system');
-            }
-            
-            // ===== HELPERS =====
-            getTypeName(type) {
-                const names = {
-                    'consumable': 'Consumible',
-                    'equipment': 'Equipo',
-                    'key': 'Llave',
-                    'special': 'Especial',
-                    'material': 'Material'
-                };
-                return names[type] || type;
-            }
-            
-            getSlotName(slot) {
-                const names = {
-                    'cabeza': 'Cabeza',
-                    'torso': 'Torso',
-                    'manos': 'Manos',
-                    'accesorio': 'Accesorio'
-                };
-                return names[slot] || slot;
-            }
-            
-            getStatsDisplay(stats) {
-                if (!stats) return '';
-                return Object.entries(stats)
-                    .map(([stat, value]) => `${this.statsData[stat].name.slice(0, 3)}+${value}`)
-                    .join(' ');
-            }
-            
-            updateLocationUI() {
-                const biome = this.biomes[this.state.location];
-                if (biome) {
-                    this.elements.location.innerHTML = `[<span style="color: ${biome.color}">${biome.name}</span>]`;
-                }
-            }
-            
-            updateProgressionUI() {
-                this.elements.xpFill.style.width = '0%';
-                this.elements.hpFill.style.width = '100%';
-            }
-            
-            updateStatus(status) {
-                this.elements.statusDot.className = `status-dot ${status}`;
-                
-                switch(status) {
-                    case 'combat':
-                        this.elements.statusText.textContent = '[COMBATE]';
-                        break;
-                    case 'level-up':
-                        this.elements.statusText.textContent = '[EVOLUCION]';
-                        break;
-                    case 'quest':
-                        this.elements.statusText.textContent = '[MISION]';
-                        break;
-                    default:
-                        this.elements.statusText.textContent = 'AUTONOMUS v5.0';
-                        break;
-                }
-            }
-            
-            updateAvatar(state) {
-                this.elements.avatar.textContent = this.avatars[state] || this.avatars.idle;
-                this.elements.avatar.className = `avatar ${state}`;
-            }
-            
-            updateInventoryUI() {
-                const container = this.elements.inventoryList;
-                const count = this.state.inventory.reduce((sum, item) => sum + item.quantity, 0);
-                
-                this.elements.inventoryCount.textContent = `${count}/${this.config.inventorySize}`;
-                
-                if (this.state.inventory.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-panel">
-                            <i>📦</i>
-                            <div>Inventario vacío</div>
+                    </div>
+
+                    <!-- Botones de acción para archivo -->
+                    <div class="action-buttons">
+                        <button id="generate-file-qr-message" class="btn-primary">Generate QR</button>
+                        <button id="scan-file-qr-message" class="btn-secondary">Scan with Camera</button>
+                        <button id="upload-matrix-btn-message" class="btn-secondary">Upload PNG Matrix</button>
+                    </div>
+
+                    <!-- Botón para volver al modo mensaje -->
+                    <div class="action-buttons" style="margin-top: 1rem;">
+                        <button id="back-to-message" class="btn-secondary"><i class="fas fa-arrow-left"></i> Back to Message</button>
+                    </div>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div id="progress-area-message" class="progress-area hidden glass">
+                    <div class="progress-bar">
+                        <div id="progress-fill-message" class="progress-fill"></div>
+                    </div>
+                    <span id="progress-text-message">0/0</span>
+                </div>
+
+                <!-- Área de salida (enlaces de descarga) -->
+                <div id="file-output-area-message" class="file-output-area hidden">
+                    <a id="download-gif-link-message" class="btn-primary" download="hushbox.gif" style="display: none;">Download GIF</a>
+                    <a id="download-png-link-message" class="btn-primary" download="hushbox-matrix.png" style="display: none;">Download PNG</a>
+                    <a id="download-reconstructed-link-message" class="btn-primary" style="display: none;">Download Reconstructed File</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- PANEL DE ARCHIVO (original, independiente) -->
+        <section id="panel-file" class="panel" role="tabpanel">
+            <div class="card file-card">
+                <!-- Passphrase -->
+                <div class="input-group">
+                    <label class="input-label" for="file-passphrase">Passphrase (for file encryption)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-key icon-left"></i>
+                        <input type="password" id="file-passphrase" placeholder="Minimum 12 characters" required>
+                        <div class="right-icons">
+                            <button type="button" class="icon-right toggle-password" data-target="file-passphrase">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                    `;
-                    return;
-                }
-                
-                // Virtualización: solo mostrar items visibles
-                const startIndex = Math.floor(this.inventoryScrollTop / 30); // 30px por item
-                const endIndex = Math.min(startIndex + this.visibleInventoryItems, this.state.inventory.length);
-                
-                let html = '';
-                for (let i = startIndex; i < endIndex; i++) {
-                    const item = this.state.inventory[i];
-                    const itemData = this.items[item.id];
-                    if (!itemData) continue;
-                    
-                    const isEquipped = Object.values(this.state.equipment).includes(item.id);
-                    
-                    html += `
-                        <div class="inventory-item ${isEquipped ? 'equipped' : ''} ${itemData.type === 'consumable' ? 'usable' : ''}"
-                             data-item="${item.id}"
-                             onmouseenter="game.showItemTooltip('${item.id}')"
-                             onmouseleave="game.hideTooltip()"
-                             onclick="game.useItem('${item.id}')">
-                            <div class="item-icon">${itemData.icon || '📦'}</div>
-                            <div class="item-info">
-                                <div class="item-name">${item.id}</div>
-                                <div class="item-type ${itemData.type}">${this.getTypeName(itemData.type)}</div>
-                            </div>
-                            <div class="item-quantity">x${item.quantity}</div>
-                        </div>
-                    `;
-                }
-                
-                // Añadir espacio para scroll
-                const totalHeight = this.state.inventory.length * 30;
-                const visibleHeight = (endIndex - startIndex) * 30;
-                const spacerTop = startIndex * 30;
-                const spacerBottom = totalHeight - (endIndex * 30);
-                
-                container.innerHTML = `
-                    <div style="height: ${spacerTop}px;"></div>
-                    ${html}
-                    <div style="height: ${spacerBottom}px;"></div>
-                `;
-            }
-            
-            updateEquipmentUI() {
-                const container = this.elements.equipmentSlots;
-                const equippedCount = Object.values(this.state.equipment).filter(x => x !== null).length;
-                
-                this.elements.equipmentCount.textContent = `${equippedCount}/4`;
-                
-                let html = '';
-                Object.entries(this.state.equipment).forEach(([slot, itemId]) => {
-                    const slotName = this.getSlotName(slot);
-                    const item = itemId ? this.items[itemId] : null;
-                    
-                    html += `
-                        <div class="equipment-slot ${item ? 'filled' : ''}"
-                             data-slot="${slot}"
-                             onmouseenter="game.showSlotTooltip('${slot}', '${itemId || ''}')"
-                             onmouseleave="game.hideTooltip()">
-                            <div class="slot-name">${slotName}</div>
-                            <div class="slot-item">${item ? item.id : '[Vacío]'}</div>
-                            ${item ? `<div class="slot-stats">${this.getStatsDisplay(item.stats)}</div>` : ''}
-                            ${item ? `
-                                <div class="unequip-btn" 
-                                     onclick="game.unequipItem('${slot}'); event.stopPropagation();"
-                                     title="Desequipar">
-                                    ✕
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = html;
-            }
-            
-            updateStatsUI() {
-                let html = '';
-                
-                Object.entries(this.state.stats).forEach(([key, value]) => {
-                    const statData = this.statsData[key];
-                    const baseValue = this.state.baseStats[key] || value;
-                    const equipmentBonus = this.state.equipmentStats[key] || 0;
-                    
-                    let valueClass = 'normal';
-                    if (value >= 15) valueClass = 'epic';
-                    else if (value >= 13) valueClass = 'very-high';
-                    else if (value >= 11) valueClass = 'high';
-                    else if (value <= 7) valueClass = 'low';
-                    
-                    let displayValue = value.toString();
-                    if (equipmentBonus > 0) {
-                        displayValue = `${baseValue}<span style="color: var(--color-success); font-size: 8px;">+${equipmentBonus}</span>`;
-                    }
-                    
-                    html += `
-                        <div class="stat" 
-                             data-stat="${key}"
-                             onmouseenter="game.showStatTooltip('${key}', ${baseValue}, ${equipmentBonus})"
-                             onmouseleave="game.hideTooltip()">
-                            <div class="stat-label">${statData.name}</div>
-                            <div class="stat-value ${valueClass}">${displayValue}</div>
-                        </div>
-                    `;
-                });
-                
-                this.elements.statsGrid.innerHTML = html;
-            }
-            
-            showSlotTooltip(slot, itemId) {
-                if (this.tooltipTimeout) clearTimeout(this.tooltipTimeout);
-                
-                this.tooltipTimeout = setTimeout(() => {
-                    const slotName = this.getSlotName(slot);
-                    const item = itemId ? this.items[itemId] : null;
-                    
-                    let tooltipHTML = `
-                        <div class="tooltip-title">
-                            ${slotName.toUpperCase()}
-                        </div>
-                        <div class="tooltip-desc">
-                            ${item ? `Equipado: ${item.id}` : 'Slot vacío'}
-                        </div>
-                    `;
-                    
-                    if (item && item.stats) {
-                        tooltipHTML += `<div class="tooltip-stats">`;
-                        Object.entries(item.stats).forEach(([stat, value]) => {
-                            tooltipHTML += `${this.statsData[stat].name}: +${value}<br>`;
-                        });
-                        tooltipHTML += `</div>`;
-                    }
-                    
-                    if (item) {
-                        tooltipHTML += `<div style="color: var(--color-danger); font-size: 9px; margin-top: 4px;">Click en ✕ para desequipar</div>`;
-                    }
-                    
-                    this.showTooltip(tooltipHTML);
-                }, 150);
-            }
-            
-            // ===== LOG =====
-            log(message, type = 'system') {
-                const entry = document.createElement('div');
-                entry.className = `log-entry ${type}`;
-                entry.textContent = message;
-                
-                this.elements.log.appendChild(entry);
-                
-                while (this.elements.log.children.length > 30) {
-                    this.elements.log.removeChild(this.elements.log.firstChild);
-                }
-                
-                this.elements.log.scrollTop = this.elements.log.scrollHeight;
-            }
-            
-            // ===== LIMPIEZA MEJORADA =====
-            destroy() {
-                if (this.animationFrame) {
-                    cancelAnimationFrame(this.animationFrame);
-                }
-                if (this.saveInterval) {
-                    clearInterval(this.saveInterval);
-                }
-                if (this.locationTimer) {
-                    clearTimeout(this.locationTimer);
-                }
-                if (this.statusEffectTimer) {
-                    clearInterval(this.statusEffectTimer);
-                }
-                if (this.tooltipTimeout) {
-                    clearTimeout(this.tooltipTimeout);
-                }
-                if (this.notificationTimeout) {
-                    clearTimeout(this.notificationTimeout);
-                }
-                
-                this.saveGameState();
-                this.saveToLeaderboard();
-                
-                console.log('Juego guardado y limpiado');
-            }
-        }
-        
-        // ===== INICIALIZACIÓN GLOBAL =====
-        let game;
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            game = new AutonomusAvatar();
-            window.game = game;
-            
-            window.addEventListener('beforeunload', () => {
-                game.destroy();
-            });
-            
-            // Instrucciones en consola
-            console.log(`%c
-    ╔══════════════════════════════════════════════════════╗
-    ║            AUTONOMUS AVATAR v5.0                     ║
-    ║            SISTEMA MEJORADO ACTIVO                   ║
-    ╠══════════════════════════════════════════════════════╣
-    ║                                                      ║
-    ║  NUEVOS SISTEMAS:                                    ║
-    ║  • Misiones con recompensas                         ║
-    ║  • Habilidades activas/pasivas                      ║
-    ║  • Efectos de estado (buffs/debuffs)                ║
-    ║  • Sistema de crafting                              ║
-    ║  • Economía y tiendas                               ║
-    ║  • Leaderboard local                                ║
-    ║  • Notificaciones visuales                          ║
-    ║  • Tooltips mejorados                               ║
-    ║                                                      ║
-    ║  CONTROLES:                                          ║
-    ║  • Q: Misiones                                       ║
-    ║  • S: Habilidades                                    ║
-    ║  • R: Crafting                                       ║
-    ║  • T: Tienda                                         ║
-    ║  • B: Leaderboard                                    ║
-    ║  • ESC: Menú sistema                                 ║
-    ║                                                      ║
-    ║  El juego se guarda automáticamente.                 ║
-    ╚══════════════════════════════════════════════════════╝
-            `, 'color: #00ff88; font-family: monospace; font-size: 11px;');
-        });
-    </script>
+                    </div>
+                </div>
+
+                <!-- Zona de arrastre -->
+                <div id="file-drop-zone" class="file-area" tabindex="0" role="button">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop a file here or click to select</p>
+                    <p class="hint">Max size: 10 MB</p>
+                    <input type="file" id="file-input" class="hidden-input">
+                </div>
+                <button id="select-file-button" class="btn-secondary">Select File</button>
+
+                <!-- Información del archivo -->
+                <div id="file-info" class="file-info hidden">
+                    <i class="fas fa-file"></i>
+                    <span id="file-name"></span>
+                    <span id="file-size"></span>
+                    <button id="clear-file" class="btn-icon small" title="Remove file">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Opciones -->
+                <div class="options-grid">
+                    <div class="input-group">
+                        <label class="input-label" for="qr-format">Output Format</label>
+                        <select id="qr-format">
+                            <option value="gif">Animated GIF</option>
+                            <option value="png-matrix">PNG Matrix</option>
+                        </select>
+                    </div>
+                    <div id="matrix-cols-group" class="input-group" style="display: none;">
+                        <label class="input-label" for="matrix-cols">Matrix Columns</label>
+                        <input type="number" id="matrix-cols" min="1" max="10" value="3">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="chunk-size">Chunk Size (characters)</label>
+                        <input type="number" id="chunk-size" min="500" max="2500" value="1800">
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="action-buttons">
+                    <button id="generate-file-qr" class="btn-primary">Generate QR</button>
+                    <button id="scan-file-qr" class="btn-secondary">Scan with Camera</button>
+                    <button id="upload-matrix-btn" class="btn-secondary">Upload PNG Matrix</button>
+                </div>
+            </div>
+
+            <!-- Barra de progreso -->
+            <div id="progress-area" class="progress-area hidden glass">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+                <span id="progress-text">0/0</span>
+            </div>
+
+            <!-- Área de salida -->
+            <div id="file-output-area" class="file-output-area hidden">
+                <a id="download-gif-link" class="btn-primary" download="hushbox.gif" style="display: none;">Download GIF</a>
+                <a id="download-png-link" class="btn-primary" download="hushbox-matrix.png" style="display: none;">Download PNG</a>
+                <a id="download-reconstructed-link" class="btn-primary" style="display: none;">Download Reconstructed File</a>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE LOGS -->
+        <section class="log-card" aria-label="Activity Log">
+            <h2 class="card-title"><i class="fas fa-history"></i> Activity Log</h2>
+            <div id="messages" class="message-container" role="log" aria-live="polite">
+                <div class="message-placeholder">
+                    <i class="fas fa-comments"></i>
+                    <p>Messages will appear here</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer" role="contentinfo">
+        <div class="social-icons">
+            <a href="https://t.me/HUSHBOX_QR" target="_blank" rel="noopener noreferrer" class="btn-icon social-icon telegram">
+                <i class="fab fa-telegram-plane"></i>
+            </a>
+            <a href="https://twitter.com/HUSHBOXonline" target="_blank" rel="noopener noreferrer" class="btn-icon social-icon twitter">
+                <i class="fab fa-twitter"></i>
+            </a>
+            <a href="https://github.com/MPetovick/HUSHBOX/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="btn-icon social-icon docs">
+                <i class="fas fa-book"></i>
+            </a>
+            <a href="mailto:hushbox.online@pm.me" class="btn-icon social-icon support">
+                <i class="fas fa-headset"></i>
+            </a>
+        </div>
+        <p>© 2025 HushBox. All rights reserved.</p>
+        <p id="app-version">Version 3.9.2 | Security Certificate: HBX-SEC-2025-08</p>
+    </footer>
+
+    <!-- MODAL DE TUTORIAL -->
+    <div id="tutorial-modal" class="modal" role="dialog" aria-labelledby="tutorial-title" aria-modal="true" tabindex="-1">
+        <div class="modal-content tutorial-content">
+            <button id="close-tutorial" class="close-modal" aria-label="Close Tutorial">×</button>
+            <div class="modal-header">
+                <h2 id="tutorial-title"><i class="fas fa-lock"></i> Welcome to HushBox</h2>
+            </div>
+            <div class="modal-body tutorial-steps">
+                <div id="tutorial-step-1" class="tutorial-step">
+                    <i class="fas fa-shield-alt feature-icon"></i>
+                    <h3>Zero-Server Security</h3>
+                    <p>Messages never touch external servers. All encryption happens locally in your browser.</p>
+                </div>
+                <div id="tutorial-step-2" class="tutorial-step hidden">
+                    <i class="fas fa-qrcode feature-icon"></i>
+                    <h3>QR Encryption</h3>
+                    <p>AES-256-GCM with PBKDF2 key derivation. Each QR contains encrypted data.</p>
+                </div>
+                <div id="tutorial-step-3" class="tutorial-step hidden">
+                    <i class="fas fa-file feature-icon"></i>
+                    <h3>File Transfer</h3>
+                    <p>Send files up to 10MB. Choose between animated GIF or PNG matrix output.</p>
+                </div>
+                <div id="tutorial-step-4" class="tutorial-step hidden">
+                    <i class="fas fa-camera feature-icon"></i>
+                    <h3>Scan QR</h3>
+                    <p>Use the built-in camera to scan QR codes instantly.</p>
+                </div>
+                <div id="tutorial-step-5" class="tutorial-step hidden">
+                    <i class="fas fa-user-secret feature-icon"></i>
+                    <h3>Complete Anonymity</h3>
+                    <p>No accounts, no tracking. Your identity remains private.</p>
+                </div>
+            </div>
+            <div class="tutorial-nav">
+                <button id="tutorial-prev" class="btn-secondary" disabled>Previous</button>
+                <span id="tutorial-counter">1/5</span>
+                <button id="tutorial-next" class="btn-primary">Next</button>
+                <button id="tutorial-done" class="btn-primary hidden">Done</button>
+            </div>
+            <div class="checkbox-label">
+                <input type="checkbox" id="dont-show-tutorial">
+                <span>Don't show this tutorial again</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CÁMARA -->
+    <div id="camera-modal" class="modal" role="dialog" aria-labelledby="camera-title" aria-modal="true" tabindex="-1">
+        <div class="modal-content">
+            <button id="close-camera" class="close-modal">×</button>
+            <div class="modal-header">
+                <h3 id="camera-title"><i class="fas fa-camera"></i> Scan QR Code</h3>
+            </div>
+            <div class="camera-container">
+                <video id="camera-preview" autoplay playsinline></video>
+                <div id="detection-box" class="detection-box"></div>
+            </div>
+            <div id="camera-hint" class="camera-hint">
+                <p>Point the camera at the QR code</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE AJUSTES -->
+    <div id="settings-modal" class="modal" role="dialog" aria-labelledby="settings-title" aria-modal="true" tabindex="-1">
+        <div class="modal-content">
+            <button class="close-modal">×</button>
+            <div class="modal-header">
+                <h2 id="settings-title"><i class="fas fa-cog"></i> Security Settings</h2>
+            </div>
+            <div class="modal-body">
+                <form id="settings-form">
+                    <div class="input-group">
+                        <label class="input-label" for="pbkdf2-iterations">PBKDF2 Iterations</label>
+                        <input type="number" id="pbkdf2-iterations" min="100000" max="1000000" step="10000" value="310000">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="security-level">Security Level</label>
+                        <select id="security-level">
+                            <option value="high">High (AES-256 + HMAC)</option>
+                            <option value="medium">Medium (AES-256)</option>
+                            <option value="low">Low (AES-128)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="session-timeout">Session Timeout (minutes)</label>
+                        <input type="number" id="session-timeout" min="1" max="120" value="30">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label" for="qr-error-correction">QR Error Correction</label>
+                        <select id="qr-error-correction">
+                            <option value="H">High (30%)</option>
+                            <option value="Q">Medium (25%)</option>
+                            <option value="M">Low (15%)</option>
+                            <option value="L">Lowest (7%)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-actions">
+                <button id="save-settings" class="btn-primary">Save</button>
+                <button id="reset-settings" class="btn-secondary">Reset</button>
+                <button id="cancel-settings" class="btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ÚNICO PARA VISUALIZAR QR -->
+    <div id="qr-modal" class="modal" role="dialog" aria-labelledby="qr-modal-title" aria-modal="true" tabindex="-1">
+        <div class="modal-content qr-modal-content">
+            <button id="close-qr-modal" class="close-modal">×</button>
+            <div class="modal-header">
+                <h3 id="qr-modal-title"><i class="fas fa-qrcode"></i> <span id="qr-modal-title-text">Secure QR Code</span></h3>
+            </div>
+            <div class="modal-body qr-modal-body">
+                <div id="qr-modal-display" class="qr-modal-display"></div>
+                <div class="qr-modal-actions" id="qr-modal-actions"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA MENSAJES DESCIFRADOS -->
+    <div id="decrypted-message-modal" class="modal" role="dialog" aria-labelledby="decrypted-title" aria-modal="true" tabindex="-1">
+        <div class="modal-content">
+            <button class="close-modal">×</button>
+            <div class="modal-header">
+                <h3 id="decrypted-title"><i class="fas fa-envelope-open-text"></i> Decrypted Message</h3>
+            </div>
+            <div class="modal-body">
+                <textarea id="decrypted-message-text" class="decrypted-message-box" readonly rows="8"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button id="copy-decrypted-btn" class="btn-primary"><i class="fas fa-copy"></i> Copy</button>
+                <button id="close-decrypted-btn" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INPUT OCULTO PARA SUBIR QR -->
+    <input type="file" id="upload-qr-file" class="hidden-input" accept="image/*">
+
+    <!-- CONTENEDOR DE NOTIFICACIONES -->
+    <div id="toast-container" role="alert" aria-live="assertive"></div>
+
+    <!-- DEPENDENCIAS -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
