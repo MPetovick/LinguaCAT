@@ -3,42 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mundo 3D · Exploración fluida</title>
+    <title>MAZE · Control por GPS</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: none;
         }
-        #info {
+        #ui {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 8px 16px;
-            border-radius: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
             backdrop-filter: blur(5px);
-            pointer-events: none;
             z-index: 10;
-            font-size: 14px;
-        }
-        .joystick-container {
-            position: absolute;
-            bottom: 40px;
-            left: 40px;
-            width: 130px;
-            height: 130px;
-            z-index: 20;
-            pointer-events: auto;
-        }
-        .joystick-container.right {
-            left: auto;
-            right: 40px;
-        }
-        canvas {
-            display: block;
+            font-size: 16px;
+            border: 1px solid rgba(255,215,0,0.3);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
         #loading {
             position: absolute;
@@ -46,32 +31,79 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: #111;
-            color: white;
+            background: #0a0a0a;
+            color: #d4af37;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 100;
-            transition: opacity 1s;
-            font-size: 24px;
+            transition: opacity 1.5s;
+            font-size: 2rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px gold;
+        }
+        #loading small {
+            font-size: 1rem;
+            margin-top: 20px;
+            color: #aaa;
+            letter-spacing: 2px;
+        }
+        .joystick-container {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 140px;
+            height: 140px;
+            z-index: 20;
+            pointer-events: auto;
+            filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
         }
         #instructions {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255,255,255,0.8);
-            background: rgba(0,0,0,0.4);
-            padding: 5px 15px;
-            border-radius: 30px;
-            font-size: 14px;
-            backdrop-filter: blur(4px);
-            pointer-events: none;
+            color: rgba(255,255,255,0.9);
+            background: rgba(10,10,10,0.6);
+            padding: 8px 25px;
+            border-radius: 40px;
+            font-size: 16px;
+            backdrop-filter: blur(8px);
             z-index: 15;
             white-space: nowrap;
+            border: 1px solid rgba(255,215,0,0.3);
+            letter-spacing: 1px;
+        }
+        canvas {
+            display: block;
+        }
+        #minimap {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 180px;
+            height: 180px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            border: 2px solid #d4af37;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            z-index: 12;
+            pointer-events: none;
+        }
+        #error-message {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: red;
+            background: black;
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 200;
         }
     </style>
-    <!-- Importar Three.js y nipple.js -->
     <script type="importmap">
         {
             "imports": {
@@ -82,24 +114,41 @@
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
 </head>
 <body>
-    <div id="loading">Cargando mundo...</div>
-    <div id="info">🌲 Bosque | 💧 Lago | 🏖️ Playa</div>
-    <div id="instructions">←→ Mover lateral | ↑↓ Avanzar/retroceder | Arrastra para mirar</div>
+    <div id="loading">
+        <div>⚙️ MAZE · GPS ⚙️</div>
+        <small>Esperando señal GPS...</small>
+    </div>
+    <div id="ui">📡 Buscando GPS...</div>
+    <div id="minimap"></div>
+    <div id="instructions">📍 Camina para mover la bola | Arrastra para mirar</div>
     
     <div id="joystick-move" class="joystick-container"></div>
-    <div id="joystick-strafe" class="joystick-container right"></div>
+    <div id="error-message" style="display: none;"></div>
 
     <script type="module">
         import * as THREE from 'three';
 
+        // --- Mostrar error en UI ---
+        function showError(msg) {
+            const el = document.getElementById('error-message');
+            el.style.display = 'block';
+            el.innerText = 'Error: ' + msg;
+        }
+
+        // --- Ocultar loading sí o sí tras 5 segundos ---
+        setTimeout(() => {
+            const loadingDiv = document.getElementById('loading');
+            loadingDiv.style.opacity = '0';
+            setTimeout(() => loadingDiv.style.display = 'none', 1500);
+        }, 5000);
+
         // --- Configuración inicial ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Azul cielo
-        scene.fog = new THREE.Fog(0x87CEEB, 100, 300);
+        scene.background = new THREE.Color(0x050510);
+        scene.fog = new THREE.FogExp2(0x050510, 0.002);
 
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(50, 20, 50);
-        camera.rotation.order = 'YXZ'; // Para evitar bloqueo de cardán
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(5, 3, 8);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -108,391 +157,493 @@
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // Ocultar loading
-        setTimeout(() => {
-            document.getElementById('loading').style.opacity = '0';
-            setTimeout(() => document.getElementById('loading').style.display = 'none', 1000);
-        }, 2000); // Simulamos carga
-
         // --- Luces ---
-        // Luz solar direccional
-        const sunLight = new THREE.DirectionalLight(0xfff5d1, 1.2);
-        sunLight.position.set(100, 100, 50);
-        sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
-        const d = 150;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        sunLight.shadow.camera.near = 1;
-        sunLight.shadow.camera.far = 250;
-        sunLight.shadow.bias = -0.0005;
-        scene.add(sunLight);
-
-        // Luz ambiental
         const ambientLight = new THREE.AmbientLight(0x404060);
         scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xccddff, 0.8);
+        dirLight.position.set(10, 30, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 20;
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // --- Variables globales ---
+        const mazeSize = 21;
+        const cellSize = 4;
+        const wallHeight = 3;
         
-        // Luz de relleno
-        const fillLight = new THREE.PointLight(0x4466cc, 0.5);
-        fillLight.position.set(-50, 30, -50);
-        scene.add(fillLight);
+        let mazeGrid = [];
+        let exitPos = { x: mazeSize-2, z: mazeSize-2 };
+        
+        // Esfera del jugador
+        const sphereRadius = 0.8;
+        const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
+        const sphereMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffaa33, 
+            roughness: 0.3, 
+            metalness: 0.1,
+            emissive: 0x331100
+        });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.castShadow = true;
+        sphere.receiveShadow = true;
+        sphere.position.set(1 * cellSize, sphereRadius, 1 * cellSize);
+        scene.add(sphere);
 
-        // --- Terreno procedural ---
-        const terrainSize = 400;
-        const terrainSegments = 200;
-        const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-        terrainGeo.rotateX(-Math.PI / 2);
+        // Luz que sigue a la esfera
+        const playerLight = new THREE.PointLight(0xffeedd, 1, 15);
+        playerLight.castShadow = true;
+        playerLight.shadow.mapSize.width = 1024;
+        playerLight.shadow.mapSize.height = 1024;
+        sphere.add(playerLight);
 
-        const positionAttribute = terrainGeo.attributes.position;
-        const vertex = new THREE.Vector3();
-        for (let i = 0; i < positionAttribute.count; i++) {
-            vertex.fromBufferAttribute(positionAttribute, i);
-            const x = vertex.x;
-            const z = vertex.z;
-
-            // Ruido simple
-            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15;
-            y += Math.sin(x * 0.05) * 5;
-            y += Math.cos(z * 0.07) * 5;
-            y += Math.random() * 2;
-
-            const distFromCenter = Math.sqrt(x*x + z*z);
-            if (distFromCenter < 40) {
-                y = -2 + Math.sin(x*0.2)*0.5; // Lago
-            } else if (distFromCenter > 180) {
-                y = 1 + Math.sin(x*0.1)*0.5; // Playas
+        // --- Generación del laberinto ---
+        function generateMaze(size) {
+            const grid = Array(size).fill().map(() => Array(size).fill(1));
+            
+            function carve(x, z) {
+                grid[x][z] = 0;
+                const directions = [[1,0], [-1,0], [0,1], [0,-1]];
+                for (let i = directions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [directions[i], directions[j]] = [directions[j], directions[i]];
+                }
+                
+                for (let [dx, dz] of directions) {
+                    const nx = x + dx*2;
+                    const nz = z + dz*2;
+                    if (nx > 0 && nx < size-1 && nz > 0 && nz < size-1 && grid[nx][nz] === 1) {
+                        grid[x + dx][z + dz] = 0;
+                        carve(nx, nz);
+                    }
+                }
             }
-
-            vertex.y = y;
-            positionAttribute.setY(i, y);
-        }
-        terrainGeo.computeVertexNormals();
-
-        // Textura de hierba
-        const textureLoader = new THREE.TextureLoader();
-        const grassTex = textureLoader.load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
-        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
-        grassTex.repeat.set(20, 20);
-
-        const terrainMaterial = new THREE.MeshStandardMaterial({
-            map: grassTex,
-            color: 0xffffff,
-            roughness: 0.6,
-            metalness: 0.1
-        });
-
-        const terrain = new THREE.Mesh(terrainGeo, terrainMaterial);
-        terrain.receiveShadow = true;
-        scene.add(terrain);
-
-        // --- Agua (lago) ---
-        const waterGeometry = new THREE.CircleGeometry(60, 64);
-        waterGeometry.rotateX(-Math.PI / 2);
-        const waterMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2a6f8f,
-            transparent: true,
-            opacity: 0.8,
-            roughness: 0.1,
-            metalness: 0.3
-        });
-        const water = new THREE.Mesh(waterGeometry, waterMaterial);
-        water.position.set(0, -1.5, 0);
-        water.receiveShadow = true;
-        scene.add(water);
-
-        // --- Playa (anillo) ---
-        const beachGeometry = new THREE.RingGeometry(35, 60, 64);
-        beachGeometry.rotateX(-Math.PI / 2);
-        const beachMaterial = new THREE.MeshStandardMaterial({
-            color: 0xf5e6d3,
-            roughness: 0.8,
-            side: THREE.DoubleSide
-        });
-        const beach = new THREE.Mesh(beachGeometry, beachMaterial);
-        beach.position.set(0, -1.2, 0);
-        beach.receiveShadow = true;
-        scene.add(beach);
-
-        // --- Instancing para árboles y rocas ---
-        // Creamos templates para árbol y roca
-        function createTreeTemplate() {
-            const group = new THREE.Group();
             
-            // Tronco
-            const trunkGeo = new THREE.CylinderGeometry(0.8, 1.2, 4);
-            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
-            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.y = 2;
-            trunk.castShadow = true;
-            trunk.receiveShadow = true;
-            group.add(trunk);
-
-            // Hojas (copa)
-            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2E8B57 });
-            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 6), leafMat);
-            leaf1.position.set(0, 4.5, 0);
-            leaf1.castShadow = true;
-            leaf1.receiveShadow = true;
-            group.add(leaf1);
-            
-            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
-            leaf2.position.set(1, 4, 0.5);
-            leaf2.castShadow = true;
-            leaf2.receiveShadow = true;
-            group.add(leaf2);
-            
-            const leaf3 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
-            leaf3.position.set(-0.8, 4, 1);
-            leaf3.castShadow = true;
-            leaf3.receiveShadow = true;
-            group.add(leaf3);
-            
-            const leaf4 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
-            leaf4.position.set(0.5, 4, -1);
-            leaf4.castShadow = true;
-            leaf4.receiveShadow = true;
-            group.add(leaf4);
-            
-            return group;
+            carve(1, 1);
+            grid[size-2][size-2] = 0;
+            return grid;
         }
 
-        function createRockTemplate() {
-            const rockGeo = new THREE.DodecahedronGeometry(0.8);
-            const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
-            return new THREE.Mesh(rockGeo, rockMat);
+        mazeGrid = generateMaze(mazeSize);
+
+        // --- Materiales ---
+        const stoneMaterial = new THREE.MeshStandardMaterial({ color: 0x7a7a7a, roughness: 0.7, metalness: 0.1 });
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
+
+        // --- Construir el laberinto (guardamos paredes) ---
+        const walls = [];
+
+        function buildMaze() {
+            const wallGroup = new THREE.Group();
+            
+            for (let i = 0; i < mazeSize; i++) {
+                for (let j = 0; j < mazeSize; j++) {
+                    if (mazeGrid[i][j] === 1) {
+                        const block = new THREE.Mesh(
+                            new THREE.BoxGeometry(cellSize-0.2, wallHeight, cellSize-0.2),
+                            stoneMaterial
+                        );
+                        block.position.set(i * cellSize, wallHeight/2, j * cellSize);
+                        block.castShadow = true;
+                        block.receiveShadow = true;
+                        wallGroup.add(block);
+                        walls.push(block);
+                    } else {
+                        const floor = new THREE.Mesh(
+                            new THREE.PlaneGeometry(cellSize-0.2, cellSize-0.2),
+                            floorMaterial
+                        );
+                        floor.rotation.x = -Math.PI/2;
+                        floor.position.set(i * cellSize, 0.01, j * cellSize);
+                        floor.receiveShadow = true;
+                        wallGroup.add(floor);
+                    }
+                }
+            }
+            
+            // Paredes exteriores
+            for (let j = 0; j < mazeSize; j++) {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(cellSize, wallHeight, cellSize), stoneMaterial);
+                wall.position.set(-cellSize, wallHeight/2, j * cellSize);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                wallGroup.add(wall);
+                walls.push(wall);
+            }
+            for (let j = 0; j < mazeSize; j++) {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(cellSize, wallHeight, cellSize), stoneMaterial);
+                wall.position.set(mazeSize * cellSize, wallHeight/2, j * cellSize);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                wallGroup.add(wall);
+                walls.push(wall);
+            }
+            for (let i = 0; i < mazeSize; i++) {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(cellSize, wallHeight, cellSize), stoneMaterial);
+                wall.position.set(i * cellSize, wallHeight/2, -cellSize);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                wallGroup.add(wall);
+                walls.push(wall);
+            }
+            for (let i = 0; i < mazeSize; i++) {
+                const wall = new THREE.Mesh(new THREE.BoxGeometry(cellSize, wallHeight, cellSize), stoneMaterial);
+                wall.position.set(i * cellSize, wallHeight/2, mazeSize * cellSize);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                wallGroup.add(wall);
+                walls.push(wall);
+            }
+            
+            scene.add(wallGroup);
         }
 
-        // En lugar de instancing complejo, usamos mallas separadas pero con geometrías compartidas
-        // Para simplificar, mantendremos el bucle pero reduciremos cantidad
-        const treeTemplate = createTreeTemplate();
-        for (let i = 0; i < 400; i++) { // Reducido de 600 a 400
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 40 + Math.random() * 150;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            
-            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15;
-            y += Math.sin(x * 0.05) * 5;
-            y += Math.cos(z * 0.07) * 5;
-            y += Math.random() * 2;
-            
-            if (Math.sqrt(x*x + z*z) < 45) continue;
-            
-            const tree = treeTemplate.clone();
-            tree.position.set(x, y, z);
-            tree.scale.set(0.8 + Math.random()*0.4, 0.8+Math.random()*0.4, 0.8+Math.random()*0.4);
-            tree.rotation.y = Math.random() * Math.PI * 2;
-            tree.castShadow = true;
-            tree.receiveShadow = true;
-            scene.add(tree);
-        }
+        buildMaze();
 
-        const rockTemplate = createRockTemplate();
-        for (let i = 0; i < 150; i++) { // Reducido de 200 a 150
-            const rock = rockTemplate.clone();
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 20 + Math.random() * 170;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15 + 0.5;
-            rock.position.set(x, y, z);
-            rock.scale.set(1 + Math.random(), 1+Math.random(), 1+Math.random());
-            rock.castShadow = true;
-            rock.receiveShadow = true;
-            scene.add(rock);
-        }
+        // --- Mini mapa ---
+        const minimapCanvas = document.createElement('canvas');
+        minimapCanvas.width = 180;
+        minimapCanvas.height = 180;
+        document.getElementById('minimap').appendChild(minimapCanvas);
+        const ctx = minimapCanvas.getContext('2d');
 
-        // --- Nubes (sprites para mejor rendimiento) ---
-        const cloudTexture = (() => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        function drawMinimap() {
+            ctx.clearRect(0, 0, 180, 180);
+            const cellW = 180 / mazeSize;
+            const cellH = 180 / mazeSize;
+            
+            for (let i = 0; i < mazeSize; i++) {
+                for (let j = 0; j < mazeSize; j++) {
+                    ctx.fillStyle = mazeGrid[i][j] === 1 ? '#333' : '#aaa';
+                    ctx.fillRect(i * cellW, j * cellH, cellW-1, cellH-1);
+                }
+            }
+            
+            const px = Math.floor(sphere.position.x / cellSize);
+            const pz = Math.floor(sphere.position.z / cellSize);
+            ctx.fillStyle = '#f00';
             ctx.beginPath();
-            ctx.arc(32, 32, 30, 0, Math.PI*2);
+            ctx.arc(px * cellW + cellW/2, pz * cellH + cellH/2, 5, 0, 2*Math.PI);
             ctx.fill();
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            
+            ctx.fillStyle = '#0f0';
             ctx.beginPath();
-            ctx.arc(20, 20, 20, 0, Math.PI*2);
+            ctx.arc(exitPos.x * cellW + cellW/2, exitPos.z * cellH + cellH/2, 4, 0, 2*Math.PI);
             ctx.fill();
-            ctx.beginPath();
-            ctx.arc(44, 20, 18, 0, Math.PI*2);
-            ctx.fill();
-            return new THREE.CanvasTexture(canvas);
-        })();
+        }
 
-        const cloudMaterial = new THREE.SpriteMaterial({ map: cloudTexture, transparent: true, opacity: 0.6 });
-        for (let i = 0; i < 40; i++) {
-            const sprite = new THREE.Sprite(cloudMaterial);
-            sprite.position.set(
-                (Math.random() - 0.5) * 300,
-                50 + Math.random() * 40,
-                (Math.random() - 0.5) * 300
+        // --- Física de la esfera (misma que antes) ---
+        const velocity = new THREE.Vector3();
+        const moveForce = 6.0;
+        const friction = 0.9;
+        const maxSpeed = 4.0;
+
+        function handleCollisions() {
+            const spherePos = sphere.position.clone();
+            const radius = sphereRadius;
+            
+            for (let wall of walls) {
+                const geometry = wall.geometry;
+                geometry.computeBoundingBox();
+                const box = geometry.boundingBox.clone();
+                box.min.add(wall.position);
+                box.max.add(wall.position);
+                
+                const closestX = Math.max(box.min.x, Math.min(spherePos.x, box.max.x));
+                const closestZ = Math.max(box.min.z, Math.min(spherePos.z, box.max.z));
+                const closestY = Math.max(box.min.y, Math.min(spherePos.y, box.max.y));
+                
+                const dx = spherePos.x - closestX;
+                const dz = spherePos.z - closestZ;
+                const dy = spherePos.y - closestY;
+                
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < radius && Math.abs(dy) < radius) {
+                    if (dist > 0.001) {
+                        const overlap = radius - dist;
+                        const nx = dx / dist;
+                        const nz = dz / dist;
+                        sphere.position.x += nx * overlap;
+                        sphere.position.z += nz * overlap;
+                        
+                        const vRel = velocity.x * nx + velocity.z * nz;
+                        if (vRel < 0) {
+                            velocity.x -= vRel * nx * 0.5;
+                            velocity.z -= vRel * nz * 0.5;
+                        }
+                    } else {
+                        const leftDist = Math.abs(spherePos.x - box.max.x);
+                        const rightDist = Math.abs(spherePos.x - box.min.x);
+                        const bottomDist = Math.abs(spherePos.z - box.max.z);
+                        const topDist = Math.abs(spherePos.z - box.min.z);
+                        
+                        const minDist = Math.min(leftDist, rightDist, bottomDist, topDist);
+                        if (minDist === leftDist) {
+                            sphere.position.x = box.max.x + radius;
+                            velocity.x = Math.abs(velocity.x) * 0.3;
+                        } else if (minDist === rightDist) {
+                            sphere.position.x = box.min.x - radius;
+                            velocity.x = -Math.abs(velocity.x) * 0.3;
+                        } else if (minDist === bottomDist) {
+                            sphere.position.z = box.max.z + radius;
+                            velocity.z = Math.abs(velocity.z) * 0.3;
+                        } else {
+                            sphere.position.z = box.min.z - radius;
+                            velocity.z = -Math.abs(velocity.z) * 0.3;
+                        }
+                    }
+                }
+            }
+            
+            sphere.position.x = Math.max(radius, Math.min(sphere.position.x, mazeSize * cellSize - radius));
+            sphere.position.z = Math.max(radius, Math.min(sphere.position.z, mazeSize * cellSize - radius));
+        }
+
+        // --- Control por GPS ---
+        let originLat = null;
+        let originLon = null;
+        let targetPosition = new THREE.Vector2(sphere.position.x, sphere.position.z); // objetivo en coordenadas del juego
+        let useGPS = false;
+
+        // Conversión de GPS a metros (ENU) relativo al origen
+        function gpsToGameCoords(lat, lon) {
+            if (originLat === null) return { x: 0, z: 0 };
+            const R = 6378137; // radio Tierra en metros
+            const dLat = (lat - originLat) * Math.PI / 180;
+            const dLon = (lon - originLon) * Math.PI / 180;
+            const avgLat = (lat + originLat) / 2 * Math.PI / 180;
+            const east = R * dLon * Math.cos(avgLat);
+            const north = R * dLat;
+            // Escalamos para que quepa en el laberinto (factor 0.1, 10m GPS = 1m juego)
+            const scale = 0.1;
+            // Además, centramos el laberinto en el origen GPS
+            const gameX = east * scale + mazeSize * cellSize / 2;
+            const gameZ = -north * scale + mazeSize * cellSize / 2; // norte es -Z en Three
+            return { x: gameX, z: gameZ };
+        }
+
+        // Iniciar GPS
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    if (originLat === null) {
+                        originLat = latitude;
+                        originLon = longitude;
+                        document.getElementById('ui').innerHTML = '📍 GPS fijado';
+                        useGPS = true;
+                    }
+                    const gameCoords = gpsToGameCoords(latitude, longitude);
+                    // Limitar al tamaño del laberinto
+                    gameCoords.x = Math.max(sphereRadius, Math.min(gameCoords.x, mazeSize * cellSize - sphereRadius));
+                    gameCoords.z = Math.max(sphereRadius, Math.min(gameCoords.z, mazeSize * cellSize - sphereRadius));
+                    targetPosition.set(gameCoords.x, gameCoords.z);
+                },
+                (err) => {
+                    showError('Error GPS: ' + err.message + ' - Usando joystick');
+                    useGPS = false;
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
             );
-            sprite.scale.set(30 + Math.random()*20, 10 + Math.random()*10, 1);
-            scene.add(sprite);
+        } else {
+            showError('GPS no soportado - Usando joystick');
         }
 
-        // --- CONTROLES TÁCTILES ---
-        const moveJoystick = nipplejs.create({
-            zone: document.getElementById('joystick-move'),
-            mode: 'static',
-            position: { left: '50%', top: '50%' },
-            color: 'blue',
-            size: 100,
-            lockY: false,
-            lockX: false
-        });
+        // --- Joystick de respaldo (si no hay GPS) ---
+        const input = { forward: 0, strafe: 0 };
+        try {
+            if (typeof nipplejs !== 'undefined') {
+                const moveJoystick = nipplejs.create({
+                    zone: document.getElementById('joystick-move'),
+                    mode: 'static',
+                    position: { left: '50%', top: '50%' },
+                    color: 'blue',
+                    size: 120
+                });
 
-        const strafeJoystick = nipplejs.create({
-            zone: document.getElementById('joystick-strafe'),
-            mode: 'static',
-            position: { left: '50%', top: '50%' },
-            color: 'red',
-            size: 100,
-            lockY: false,
-            lockX: false
-        });
+                moveJoystick.on('move', (evt, data) => {
+                    if (!useGPS) { // solo si no estamos usando GPS
+                        input.strafe = data.vector.x;
+                        input.forward = -data.vector.y;
+                    }
+                }).on('end', () => {
+                    input.forward = 0;
+                    input.strafe = 0;
+                });
+            } else {
+                showError('nipplejs no cargado, usa teclado (WASD)');
+                window.addEventListener('keydown', (e) => {
+                    if (!useGPS) {
+                        switch(e.code) {
+                            case 'KeyW': input.forward = 1; break;
+                            case 'KeyS': input.forward = -1; break;
+                            case 'KeyA': input.strafe = -1; break;
+                            case 'KeyD': input.strafe = 1; break;
+                        }
+                    }
+                });
+                window.addEventListener('keyup', (e) => {
+                    if (!useGPS) {
+                        switch(e.code) {
+                            case 'KeyW': case 'KeyS': input.forward = 0; break;
+                            case 'KeyA': case 'KeyD': input.strafe = 0; break;
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            showError('Error al crear joystick: ' + e.message);
+        }
 
-        // Estado de entrada
-        const input = {
-            forward: 0,
-            strafe: 0,
-            lookYaw: 0,     // acumulador para rotación horizontal
-            lookPitch: 0,    // acumulador para rotación vertical
-            touchActive: false
-        };
-
-        moveJoystick.on('move', (evt, data) => {
-            // data.vector.y: -1 arriba, 1 abajo
-            input.forward = -data.vector.y; // positivo = adelante
-        }).on('end', () => {
-            input.forward = 0;
-        });
-
-        strafeJoystick.on('move', (evt, data) => {
-            input.strafe = data.vector.x; // positivo = derecha
-        }).on('end', () => {
-            input.strafe = 0;
-        });
-
-        // Arrastre para mirar
-        const lookSensitivity = 0.004;
+        // --- Rotación de cámara con arrastre (igual que antes) ---
+        let isTouching = false;
         let lastTouchX = 0, lastTouchY = 0;
+        const lookSensitivity = 0.005;
+        let lookX = 0, lookY = 0; // ángulos de cámara
 
         renderer.domElement.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
-                input.touchActive = true;
+                isTouching = true;
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
             }
         });
 
         renderer.domElement.addEventListener('touchmove', (e) => {
-            if (input.touchActive && e.touches.length === 1) {
+            if (isTouching && e.touches.length === 1) {
                 const dx = e.touches[0].clientX - lastTouchX;
                 const dy = e.touches[0].clientY - lastTouchY;
-                
-                input.lookYaw += dx * lookSensitivity;
-                input.lookPitch += dy * lookSensitivity;
-                
-                // Limitar pitch (vertical)
-                input.lookPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, input.lookPitch));
-                
+                lookX += dx * lookSensitivity;
+                lookY += dy * lookSensitivity;
+                lookY = Math.max(-Math.PI/4, Math.min(Math.PI/6, lookY));
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
             }
         });
 
-        renderer.domElement.addEventListener('touchend', () => {
-            input.touchActive = false;
-        });
+        renderer.domElement.addEventListener('touchend', () => { isTouching = false; });
 
-        // Soporte para ratón (escritorio)
         renderer.domElement.addEventListener('mousedown', (e) => {
             if (e.button === 0) {
-                input.touchActive = true;
+                isTouching = true;
                 lastTouchX = e.clientX;
                 lastTouchY = e.clientY;
             }
         });
         window.addEventListener('mousemove', (e) => {
-            if (input.touchActive) {
+            if (isTouching) {
                 const dx = e.clientX - lastTouchX;
                 const dy = e.clientY - lastTouchY;
-                input.lookYaw += dx * lookSensitivity;
-                input.lookPitch += dy * lookSensitivity;
-                input.lookPitch = Math.max(-Math.PI/3, Math.min(Math.PI/3, input.lookPitch));
+                lookX += dx * lookSensitivity;
+                lookY += dy * lookSensitivity;
+                lookY = Math.max(-Math.PI/4, Math.min(Math.PI/6, lookY));
                 lastTouchX = e.clientX;
                 lastTouchY = e.clientY;
             }
         });
-        window.addEventListener('mouseup', () => {
-            input.touchActive = false;
-        });
+        window.addEventListener('mouseup', () => { isTouching = false; });
 
-        // --- Variables de movimiento con delta time ---
-        const moveSpeed = 8.0; // unidades por segundo
-        const velocity = new THREE.Vector3();
-
-        // Reloj para delta
+        // --- Bucle de animación ---
         const clock = new THREE.Clock();
 
         function animate() {
-            const delta = Math.min(clock.getDelta(), 0.1); // Limitar a 0.1s
+            try {
+                const delta = Math.min(clock.getDelta(), 0.1);
 
-            // Actualizar rotación de cámara
-            camera.rotation.x = input.lookPitch; // pitch
-            camera.rotation.y += input.lookYaw;   // yaw (acumulativo)
-            // Reiniciamos lookYaw para que no se acumule infinitamente (ya que es diferencial)
-            input.lookYaw = 0; // La rotación se aplica cada frame, así que reiniciamos el acumulador
+                // Determinar dirección de movimiento
+                if (useGPS) {
+                    // Movimiento hacia targetPosition (GPS)
+                    const dir = new THREE.Vector2(targetPosition.x - sphere.position.x, targetPosition.y - sphere.position.z);
+                    const dist = dir.length();
+                    if (dist > 0.1) {
+                        dir.normalize();
+                        // Aplicar fuerza proporcional a la distancia (máxima moveForce)
+                        const force = Math.min(dist * 2, moveForce); // más lejos, más fuerza
+                        velocity.x += dir.x * force * delta;
+                        velocity.z += dir.y * force * delta;
+                    }
+                } else {
+                    // Movimiento con joystick (relativo a cámara)
+                    const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                    camDir.y = 0;
+                    camDir.normalize();
+                    const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                    camRight.y = 0;
+                    camRight.normalize();
 
-            // Direcciones de movimiento
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            forward.y = 0;
-            forward.normalize();
+                    const targetAccel = new THREE.Vector3();
+                    targetAccel.addScaledVector(camDir, input.forward * moveForce);
+                    targetAccel.addScaledVector(camRight, input.strafe * moveForce);
 
-            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-            right.y = 0;
-            right.normalize();
-
-            // Velocidad deseada
-            velocity.set(0, 0, 0);
-            velocity.addScaledVector(forward, input.forward * moveSpeed);
-            velocity.addScaledVector(right, input.strafe * moveSpeed);
-
-            // Aplicar movimiento
-            camera.position.addScaledVector(velocity, delta);
-
-            // Animaciones simples
-            water.rotation.y += 0.001;
-
-            // Mover nubes (sprites)
-            scene.children.forEach(child => {
-                if (child.isSprite && child.material.map === cloudTexture) {
-                    child.position.x += 0.05;
-                    if (child.position.x > 200) child.position.x = -200;
+                    velocity.addScaledVector(targetAccel, delta);
                 }
-            });
 
-            renderer.render(scene, camera);
+                // Fricción y límite de velocidad
+                velocity.multiplyScalar(1 - friction * delta);
+                if (velocity.length() > maxSpeed) {
+                    velocity.normalize().multiplyScalar(maxSpeed);
+                }
+
+                // Mover esfera
+                sphere.position.x += velocity.x * delta;
+                sphere.position.z += velocity.z * delta;
+
+                // Colisiones
+                handleCollisions();
+
+                // Rotación de la esfera
+                if (velocity.length() > 0.01) {
+                    const speed = velocity.length();
+                    const axis = new THREE.Vector3(-velocity.z, 0, velocity.x).normalize();
+                    const angle = speed * delta / sphereRadius;
+                    sphere.rotateOnWorldAxis(axis, angle);
+                }
+
+                sphere.position.y = sphereRadius; // fijo
+
+                // Comprobar salida
+                const px = Math.floor(sphere.position.x / cellSize);
+                const pz = Math.floor(sphere.position.z / cellSize);
+                if (px === exitPos.x && pz === exitPos.z) {
+                    document.getElementById('ui').innerHTML = '🎉 ¡Has escapado! 🎉';
+                }
+
+                // Actualizar cámara
+                const camRadius = 7;
+                const camHeight = 2.5;
+                const camX = sphere.position.x + camRadius * Math.sin(lookX) * Math.cos(lookY);
+                const camY = sphere.position.y + camHeight + camRadius * Math.sin(lookY);
+                const camZ = sphere.position.z + camRadius * Math.cos(lookX) * Math.cos(lookY);
+                
+                camera.position.set(camX, camY, camZ);
+                camera.lookAt(sphere.position.x, sphere.position.y + 0.5, sphere.position.z);
+
+                // Mini mapa
+                drawMinimap();
+
+                renderer.render(scene, camera);
+            } catch (e) {
+                showError('Error en animate: ' + e.message);
+            }
             requestAnimationFrame(animate);
         }
 
         animate();
 
-        // --- Resize ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        console.log('Mundo mejorado cargado');
     </script>
 </body>
 </html>
