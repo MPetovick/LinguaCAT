@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SPACE INVADERS AR · Edición Profesional</title>
+    <title>SPACE INVADERS AR · Ejes invertidos (natural)</title>
     <style>
+        /* (los mismos estilos que antes, los mantengo por brevedad) */
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             touch-action: none;
         }
         #ui {
@@ -31,7 +32,6 @@
             border-radius: 40px;
             backdrop-filter: blur(4px);
             border: 1px solid rgba(255,255,255,0.3);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         #crosshair {
             position: absolute;
@@ -86,12 +86,11 @@
             user-select: none;
             touch-action: manipulation;
             cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.1s;
-            backdrop-filter: blur(4px);
+            transition: transform 0.1s;
         }
         #shoot-btn:active {
             transform: scale(0.9);
-            box-shadow: 0 0 80px #ff9900, 0 5px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 0 80px #ff9900;
         }
         #restart {
             position: absolute;
@@ -103,14 +102,11 @@
             border: none;
             padding: 15px 50px;
             font-size: 1.8rem;
-            font-weight: bold;
             border-radius: 60px;
             z-index: 100;
             display: none;
             cursor: pointer;
-            font-family: inherit;
             box-shadow: 0 0 30px #ffd966;
-            letter-spacing: 2px;
             border: 2px solid white;
         }
         #gameover {
@@ -128,9 +124,7 @@
             text-align: center;
             border: 4px solid #ff0000;
             display: none;
-            pointer-events: none;
             backdrop-filter: blur(10px);
-            text-shadow: 0 0 20px red;
             white-space: nowrap;
         }
         #status {
@@ -159,7 +153,6 @@
             text-align: center;
             border: 2px solid #0ff;
             backdrop-filter: blur(15px);
-            box-shadow: 0 0 100px #00ffff;
             display: none;
         }
         #orientation-prompt button {
@@ -172,7 +165,6 @@
             color: black;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 0 30px cyan;
         }
     </style>
 </head>
@@ -185,48 +177,41 @@
     <div id="shoot-btn">🔫</div>
     <div id="gameover">GAME OVER</div>
     <div id="restart">VOLVER A JUGAR</div>
-    <div id="status">Inicializando sensores...</div>
+    <div id="status">Inicializando...</div>
     <div id="orientation-prompt">
         <h2>🎯 Activar giroscopio</h2>
         <p>Necesitamos acceso a la orientación para apuntar.</p>
         <button id="request-orientation">PERMITIR</button>
     </div>
 
-    <!-- Cargamos Three.js y loaders -->
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
             }
         }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        
-        // --- Escena, cámara, renderer ---
+
+        // --- Escena, cámara, render (sin fondo de cámara real, solo 3D) ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510); // Azul noche profundo
+        scene.background = new THREE.Color(0x050510); // Azul noche
         
-        // Cámara con campo de visión realista (75 grados)
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.6, 0); // Altura de ojos
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limitar para rendimiento
-        renderer.shadowMap.enabled = true; // Sombras para más realismo
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminación profesional ---
-        // Luz ambiental suave
+        // --- Iluminación (igual que antes) ---
         const ambientLight = new THREE.AmbientLight(0x404060);
         scene.add(ambientLight);
         
-        // Luz principal direccional (simula sol)
         const sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
         sunLight.position.set(10, 20, 5);
         sunLight.castShadow = true;
@@ -241,22 +226,19 @@
         sunLight.shadow.camera.far = 50;
         scene.add(sunLight);
         
-        // Luz de relleno trasera
         const backLight = new THREE.PointLight(0x4466ff, 0.5);
         backLight.position.set(-5, 5, -10);
         scene.add(backLight);
         
-        // Luz de acento para los marcianos
         const accentLight = new THREE.PointLight(0xffaa00, 0.8, 30);
         accentLight.position.set(0, 5, 5);
         scene.add(accentLight);
 
-        // --- Fondo espacial con estrellas (partículas) ---
+        // --- Fondo estrellado ---
         const starsGeometry = new THREE.BufferGeometry();
         const starsCount = 2000;
         const starsPositions = new Float32Array(starsCount * 3);
         for (let i = 0; i < starsCount * 3; i += 3) {
-            // Distribución esférica
             const r = 80 + Math.random() * 50;
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
@@ -265,7 +247,7 @@
             starsPositions[i+2] = r * Math.cos(phi);
         }
         starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
-        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.8 });
+        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true });
         const stars = new THREE.Points(starsGeometry, starsMaterial);
         scene.add(stars);
 
@@ -278,105 +260,80 @@
         let score = 0;
         let gameActive = true;
         let lastShot = 0;
-        const SHOT_COOLDOWN = 300; // ms
-        
-        // Elementos UI
+        const SHOT_COOLDOWN = 300;
+
+        // UI
         const livesSpan = document.getElementById('lives');
         const scoreSpan = document.getElementById('score');
         const gameoverDiv = document.getElementById('gameover');
         const restartBtn = document.getElementById('restart');
         const statusDiv = document.getElementById('status');
         const shootBtn = document.getElementById('shoot-btn');
-        
-        // --- Cargador de modelos GLTF (para marcianos profesionales) ---
-        const loader = new GLTFLoader();
-        // Usamos un modelo gratuito de un alien (por si falla, usamos geometría de respaldo)
-        let alienModel = null;
-        loader.load('https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/Alien/alien.glb', 
-            (gltf) => {
-                alienModel = gltf.scene;
-                // Ajustar escala y materiales
-                alienModel.scale.set(0.5, 0.5, 0.5);
-                alienModel.traverse(node => {
-                    if (node.isMesh) {
-                        node.castShadow = true;
-                        node.receiveShadow = true;
-                        if (node.material) {
-                            node.material.metalness = 0.2;
-                            node.material.roughness = 0.4;
-                        }
-                    }
-                });
-                statusDiv.innerHTML = 'Modelo alien cargado';
-            },
-            (xhr) => {
-                // progreso
-            },
-            (error) => {
-                console.warn('No se pudo cargar el modelo GLTF, usando geometría de respaldo', error);
-                alienModel = null; // Usaremos geometría básica
-            }
-        );
 
-        // --- Función para crear marciano de respaldo (si no carga el modelo) ---
-        function createBackupAlien() {
+        // --- Calibración de orientación: ángulos de referencia ---
+        let initialBeta = null;
+        let initialGamma = null;
+
+        // --- Función para crear marciano (geometría de respaldo detallada) ---
+        function createAlien() {
             const group = new THREE.Group();
             
-            // Cuerpo principal (cápsula)
-            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 8);
+            // Cuerpo (cilindro)
+            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.0, 8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x33dd33, emissive: 0x113311, roughness: 0.3, metalness: 0.1 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.4;
+            body.position.y = 0.5;
             body.castShadow = true;
             body.receiveShadow = true;
             group.add(body);
             
             // Cabeza
-            const headGeo = new THREE.SphereGeometry(0.3, 16);
+            const headGeo = new THREE.SphereGeometry(0.4, 16);
             const headMat = new THREE.MeshStandardMaterial({ color: 0x44ee44, emissive: 0x113311 });
             const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 0.9;
+            head.position.y = 1.1;
             head.castShadow = true;
             head.receiveShadow = true;
             group.add(head);
             
-            // Ojos (blancos con pupilas rojas)
+            // Ojos
             const eyeGeo = new THREE.SphereGeometry(0.12, 8);
             const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.15, 0.95, 0.25);
+            eyeL.position.set(-0.2, 1.2, 0.35);
             group.add(eyeL);
             const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(0.15, 0.95, 0.25);
+            eyeR.position.set(0.2, 1.2, 0.35);
             group.add(eyeR);
             
+            // Pupilas rojas
             const pupilGeo = new THREE.SphereGeometry(0.06, 6);
             const pupilMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
             const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilL.position.set(-0.15, 0.95, 0.35);
+            pupilL.position.set(-0.2, 1.2, 0.45);
             group.add(pupilL);
             const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilR.position.set(0.15, 0.95, 0.35);
+            pupilR.position.set(0.2, 1.2, 0.45);
             group.add(pupilR);
             
             // Antenas
-            const antennaGeo = new THREE.ConeGeometry(0.05, 0.3, 6);
+            const antennaGeo = new THREE.ConeGeometry(0.07, 0.4, 6);
             const antennaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
             const ant1 = new THREE.Mesh(antennaGeo, antennaMat);
-            ant1.position.set(-0.1, 1.15, 0);
+            ant1.position.set(-0.15, 1.5, 0);
             ant1.rotation.z = 0.2;
             group.add(ant1);
             const ant2 = new THREE.Mesh(antennaGeo, antennaMat);
-            ant2.position.set(0.1, 1.15, 0);
+            ant2.position.set(0.15, 1.5, 0);
             ant2.rotation.z = -0.2;
             group.add(ant2);
             
-            // Base inferior
-            const baseGeo = new THREE.TorusGeometry(0.3, 0.05, 6, 20);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8, roughness: 0.2 });
+            // Base (aro)
+            const baseGeo = new THREE.TorusGeometry(0.4, 0.05, 6, 20);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
             const base = new THREE.Mesh(baseGeo, baseMat);
             base.rotation.x = Math.PI/2;
-            base.position.y = 0.1;
+            base.position.y = 0.15;
             group.add(base);
             
             return group;
@@ -390,12 +347,11 @@
             return { x: dx, z: -dz };
         }
 
-        // --- Generar marcianos en posiciones GPS alrededor del origen ---
-        function generarMarcianos(centerLat, centerLon, cantidad = 10) {
+        // --- Generar marcianos alrededor del punto de origen ---
+        function generarMarcianos(centerLat, centerLon, cantidad = 12) {
             for (let i = 0; i < cantidad; i++) {
-                // Posición aleatoria en un radio de 15 a 50 metros
                 const angle = Math.random() * Math.PI * 2;
-                const dist = 20 + Math.random() * 40;
+                const dist = 15 + Math.random() * 35; // entre 15 y 50 metros
                 const offsetX = Math.cos(angle) * dist;
                 const offsetZ = Math.sin(angle) * dist;
                 
@@ -405,39 +361,27 @@
                 const alienLat = centerLat + latOffset;
                 const alienLon = centerLon + lonOffset;
                 
-                // Crear modelo (usar el cargado si disponible, si no, respaldo)
-                let mesh;
-                if (alienModel) {
-                    mesh = alienModel.clone();
-                    mesh.scale.set(0.8, 0.8, 0.8);
-                } else {
-                    mesh = createBackupAlien();
-                }
-                
+                const mesh = createAlien();
                 mesh.castShadow = true;
                 mesh.receiveShadow = true;
                 
-                // Posición relativa al origen (en metros)
-                const pos = latLonToMeters(alienLat, alienLon, centerLat, centerLon);
-                mesh.position.set(pos.x, 0, pos.z);
-                
-                // Añadir animación interna (flotación)
+                // Guardar coordenadas reales en userData
                 mesh.userData = {
-                    floatOffset: Math.random() * Math.PI * 2,
-                    floatSpeed: 0.5 + Math.random() * 0.5,
-                    rotationSpeed: 0.01 + Math.random() * 0.02,
                     lat: alienLat,
                     lon: alienLon,
-                    health: 1,
+                    floatOffset: Math.random() * Math.PI * 2,
+                    floatSpeed: 0.5 + Math.random() * 0.5,
+                    rotationSpeed: 0.005 + Math.random() * 0.01,
                     baseY: 0
                 };
                 
                 scene.add(mesh);
                 marcianos.push(mesh);
             }
+            statusDiv.innerHTML = `${marcianos.length} invasores generados`;
         }
 
-        // --- Iniciar GPS ---
+        // --- Iniciar GPS (con fallback a posición fija para pruebas) ---
         function startGPS() {
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(
@@ -453,58 +397,76 @@
                         playerPosition.lon = longitude;
                     },
                     (err) => {
-                        statusDiv.innerHTML = 'Error GPS: ' + err.message;
-                        // Fallback: usar posición simulada
+                        statusDiv.innerHTML = 'Error GPS, usando posición simulada';
                         if (originLat === null) {
-                            originLat = 40.4168; // Ejemplo: Madrid
+                            originLat = 40.4168; // Madrid
                             originLon = -3.7038;
                             generarMarcianos(originLat, originLon, 15);
                         }
                     },
-                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 15000 }
                 );
             } else {
-                statusDiv.innerHTML = 'GPS no soportado, usando posición fija';
+                statusDiv.innerHTML = 'GPS no soportado, modo simulación';
                 originLat = 40.4168;
                 originLon = -3.7038;
                 generarMarcianos(originLat, originLon, 15);
             }
         }
 
-        // --- Manejo de orientación del dispositivo (giroscopio) ---
+        // --- MANEJADOR DE ORIENTACIÓN CORREGIDO (ejes invertidos para control natural) ---
+        function handleOrientation(event) {
+            if (!gameActive) return;
+            
+            let beta = event.beta;  // Inclinación frontal (-180 a 180), 0 cuando el móvil está vertical mirando al horizonte
+            let gamma = event.gamma; // Inclinación lateral (-90 a 90), 0 cuando está nivelado
+            
+            // En algunos dispositivos los valores pueden ser nulos
+            if (beta === null || gamma === null) return;
+            
+            // Calibrar con la primera lectura (opcional, para que el frente sea donde el usuario empieza mirando)
+            if (initialBeta === null) {
+                initialBeta = beta;
+                initialGamma = gamma;
+                statusDiv.innerHTML = 'Orientación calibrada';
+            }
+            
+            // Convertir a radianes
+            const betaRad = THREE.MathUtils.degToRad(beta - initialBeta);
+            const gammaRad = THREE.MathUtils.degToRad(gamma - initialGamma);
+            
+            // --- Ajuste de ejes para control natural ---
+            // - gamma (lateral) controla la rotación en Y (guiñada): positivo a la derecha debe mirar a la derecha.
+            // - beta (frontal) controla la rotación en X (cabeceo): positivo hacia arriba debe mirar arriba.
+            // Límites para evitar que la cámara se voltee completamente
+            const maxPitch = Math.PI / 2.2; // unos 80 grados
+            const pitch = Math.max(-maxPitch, Math.min(maxPitch, betaRad));
+            const yaw = gammaRad; // sin límite, puede girar 360 grados
+            
+            // Aplicar rotación: primero Y (guiñada), luego X (cabeceo) (orden ZXY podría funcionar, pero probamos así)
+            camera.rotation.order = 'YXZ'; // Para que el cabeceo no afecte la guiñada
+            camera.rotation.set(pitch, yaw, 0);
+            
+            // Nota: No usamos alpha (brújula) para no liar al usuario
+        }
+
+        // --- Solicitar permisos de orientación (iOS) ---
         function requestOrientation() {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
-                    .then(permission => {
-                        if (permission === 'granted') {
+                    .then(perm => {
+                        if (perm === 'granted') {
                             window.addEventListener('deviceorientation', handleOrientation);
                             document.getElementById('orientation-prompt').style.display = 'none';
-                            statusDiv.innerHTML = 'Giroscopio activado';
+                            statusDiv.innerHTML = 'Giroscopio OK';
                         }
                     })
                     .catch(console.error);
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
                 document.getElementById('orientation-prompt').style.display = 'none';
-                statusDiv.innerHTML = 'Giroscopio activado';
+                statusDiv.innerHTML = 'Giroscopio OK';
             }
-        }
-
-        // Convertir ángulos del dispositivo a rotación de cámara (Three.js)
-        function handleOrientation(event) {
-            if (!gameActive) return;
-            
-            const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0; // 0-360
-            const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;   // -180 a 180
-            const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0; // -90 a 90
-            
-            // Ajuste para que la cámara mire hacia adelante (eje -Z) y la orientación sea natural
-            // Usamos la convención ZXY para que la cámara rote como un dispositivo móvil
-            const euler = new THREE.Euler(beta, alpha, -gamma, 'ZXY');
-            camera.quaternion.setFromEuler(euler);
-            
-            // Corrección para que el horizonte sea horizontal (según pruebas)
-            camera.rotateX(Math.PI / 2); // Ajuste fino
         }
 
         // Mostrar prompt si es necesario
@@ -512,7 +474,6 @@
             document.getElementById('orientation-prompt').style.display = 'block';
             document.getElementById('request-orientation').addEventListener('click', requestOrientation);
         } else {
-            // En Android, el evento está disponible directamente (pero puede requerir que la página sea HTTPS)
             window.addEventListener('deviceorientation', handleOrientation);
         }
 
@@ -523,63 +484,49 @@
             if (now - lastShot < SHOT_COOLDOWN) return;
             lastShot = now;
             
-            // Efecto visual en botón
             shootBtn.style.transform = 'scale(0.8)';
             setTimeout(() => shootBtn.style.transform = '', 150);
             
-            // Crear rayo desde la cámara
             const raycaster = new THREE.Raycaster();
             raycaster.ray.origin.copy(camera.position);
             raycaster.ray.direction.set(0, 0, -1).applyQuaternion(camera.quaternion);
             
-            // Detectar marcianos (usamos esferas para colisión)
+            // Detección por esfera
             const hit = marcianos.find(marciano => {
                 const sphere = new THREE.Sphere(marciano.position.clone(), 1.2);
                 return raycaster.ray.intersectsSphere(sphere);
             });
             
             if (hit) {
-                // Explosión (partículas)
                 createExplosion(hit.position.clone());
-                
-                // Eliminar marciano
                 scene.remove(hit);
                 marcianos = marcianos.filter(m => m !== hit);
                 score += 100;
                 scoreSpan.textContent = score;
                 
-                // Generar un nuevo marciano para mantener la población
+                // Reponer uno nuevo
                 if (originLat) {
-                    setTimeout(() => generarMarcianos(originLat, originLon, 1), 500);
+                    setTimeout(() => generarMarcianos(originLat, originLon, 1), 800);
                 }
             }
         }
 
-        // Efecto de explosión con partículas
+        // --- Explosión de partículas (simple) ---
         function createExplosion(position) {
             const particleCount = 20;
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleCount * 3);
-            const colors = new Float32Array(particleCount * 3);
-            
-            for (let i = 0; i < particleCount; i++) {
-                positions[i*3] = position.x;
-                positions[i*3+1] = position.y;
-                positions[i*3+2] = position.z;
-                
-                colors[i*3] = 1;
-                colors[i*3+1] = Math.random() * 0.5;
-                colors[i*3+2] = 0;
+            for (let i = 0; i < particleCount * 3; i+=3) {
+                positions[i] = position.x;
+                positions[i+1] = position.y;
+                positions[i+2] = position.z;
             }
-            
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
             
-            const material = new THREE.PointsMaterial({ size: 0.5, vertexColors: true, blending: THREE.AdditiveBlending });
+            const material = new THREE.PointsMaterial({ color: 0xff6600, size: 0.3, blending: THREE.AdditiveBlending });
             const particles = new THREE.Points(geometry, material);
             scene.add(particles);
             
-            // Animar partículas
             const velocities = [];
             for (let i = 0; i < particleCount; i++) {
                 velocities.push(new THREE.Vector3(
@@ -596,43 +543,38 @@
                     scene.remove(particles);
                     return;
                 }
-                const positions = particles.geometry.attributes.position.array;
+                const pos = particles.geometry.attributes.position.array;
                 for (let i = 0; i < particleCount; i++) {
-                    positions[i*3] += velocities[i].x;
-                    positions[i*3+1] += velocities[i].y;
-                    positions[i*3+2] += velocities[i].z;
-                    velocities[i].y -= 0.005; // gravedad
+                    pos[i*3] += velocities[i].x;
+                    pos[i*3+1] += velocities[i].y;
+                    pos[i*3+2] += velocities[i].z;
+                    velocities[i].y -= 0.005;
                 }
                 particles.geometry.attributes.position.needsUpdate = true;
                 time++;
             }, 30);
         }
 
-        // --- Actualizar movimiento de marcianos (flotación + acercamiento) ---
+        // --- Actualizar movimiento de marcianos (flotación y acercamiento) ---
         function updateMarcianos() {
             if (!gameActive || !originLat || !playerPosition.lat) return;
             
             const playerMeters = latLonToMeters(playerPosition.lat, playerPosition.lon, originLat, originLon);
             
             marcianos.forEach(marciano => {
-                // Obtener lat/lon del marciano (guardado en userData)
-                if (!marciano.userData.lat) return;
-                
-                // Posición en metros absolutos
                 const alienMeters = latLonToMeters(marciano.userData.lat, marciano.userData.lon, originLat, originLon);
                 
-                // Vector hacia el jugador (en metros)
+                // Dirección al jugador
                 const dx = playerMeters.x - alienMeters.x;
                 const dz = playerMeters.z - alienMeters.z;
                 const dist = Math.sqrt(dx*dx + dz*dz);
                 
                 // Movimiento hacia el jugador si está lejos
-                if (dist > 5) {
-                    const speed = 0.02; // velocidad constante
+                if (dist > 4) {
+                    const speed = 0.015;
                     const moveX = (dx / dist) * speed;
                     const moveZ = (dz / dist) * speed;
                     
-                    // Actualizar lat/lon
                     const deltaLat = -moveZ / 111320;
                     const deltaLon = moveX / (111320 * Math.cos(originLat * Math.PI/180));
                     
@@ -640,54 +582,47 @@
                     marciano.userData.lon += deltaLon;
                 }
                 
-                // Recalcular posición en metros (relativa al jugador)
-                const newAlienMeters = latLonToMeters(marciano.userData.lat, marciano.userData.lon, originLat, originLon);
-                const relativeX = newAlienMeters.x - playerMeters.x;
-                const relativeZ = newAlienMeters.z - playerMeters.z;
+                // Recalcular posición relativa al jugador
+                const newMeters = latLonToMeters(marciano.userData.lat, marciano.userData.lon, originLat, originLon);
+                const relX = newMeters.x - playerMeters.x;
+                const relZ = newMeters.z - playerMeters.z;
                 
-                // Aplicar flotación (seno en Y)
+                // Flotación senoidal
                 const floatY = Math.sin(Date.now() * 0.003 + marciano.userData.floatOffset) * 0.3;
+                marciano.position.set(relX, 1.0 + floatY, relZ);
                 
-                marciano.position.set(relativeX, 1.0 + floatY, relativeZ);
-                
-                // Rotar para que mire al jugador (solo en Y)
+                // Rotación para mirar al jugador (solo en Y)
                 marciano.lookAt(0, marciano.position.y, 0);
-                
-                // Rotación adicional en eje Y (como si nadaran)
-                marciano.rotation.y += marciano.userData.rotationSpeed;
+                marciano.rotation.y += marciano.userData.rotationSpeed; // rotación adicional
             });
         }
 
-        // --- Detectar colisiones (marciano toca al jugador) ---
+        // --- Colisiones (marciano toca al jugador) ---
         function checkCollisions() {
             if (!gameActive) return;
             
             marcianos.forEach(marciano => {
                 const dist = marciano.position.length();
                 if (dist < 2.5) {
-                    // Marciano ataca
                     lives--;
                     livesSpan.textContent = lives;
                     
-                    // Eliminar ese marciano
                     scene.remove(marciano);
                     marcianos = marcianos.filter(m => m !== marciano);
-                    
-                    // Sacudida de cámara (opcional)
                     
                     if (lives <= 0) {
                         gameActive = false;
                         gameoverDiv.style.display = 'block';
                         restartBtn.style.display = 'block';
                     } else {
-                        // Generar un nuevo marciano
+                        // Reponer uno
                         if (originLat) generarMarcianos(originLat, originLon, 1);
                     }
                 }
             });
         }
 
-        // --- Reiniciar juego ---
+        // --- Reiniciar ---
         function restartGame() {
             lives = 3;
             score = 0;
@@ -698,11 +633,9 @@
             gameoverDiv.style.display = 'none';
             restartBtn.style.display = 'none';
             
-            // Limpiar marcianos
             marcianos.forEach(m => scene.remove(m));
             marcianos = [];
             
-            // Regenerar
             if (originLat) {
                 generarMarcianos(originLat, originLon, 15);
             }
@@ -712,32 +645,26 @@
         shootBtn.addEventListener('click', shoot);
         shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
 
-        // --- Animación principal ---
+        // --- Bucle de animación ---
         function animate() {
             requestAnimationFrame(animate);
             
-            // Rotar estrellas lentamente
-            stars.rotation.y += 0.0001;
+            stars.rotation.y += 0.0002;
             
-            // Actualizar marcianos (movimiento y flotación)
             updateMarcianos();
-            
-            // Detectar colisiones
             checkCollisions();
             
             renderer.render(scene, camera);
         }
-        
         animate();
 
-        // --- Ajuste de tamaño de ventana ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Iniciar GPS
+        // Arrancar GPS
         startGPS();
     </script>
 </body>
