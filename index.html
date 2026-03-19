@@ -2,768 +2,661 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Simulación Divina Móvil</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PAC-MAN: Edición Callejera</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: none; /* Evita desplazamientos táctiles no deseados */
+            font-family: 'Courier New', monospace;
+            touch-action: none;
         }
-        #info-panel {
+        #info {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.75);
+            top: 20px;
+            left: 20px;
             color: white;
-            padding: 12px;
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,215,0,0.3);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
             z-index: 100;
-            font-size: 14px;
-            transition: transform 0.3s ease;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-            pointer-events: none;
-        }
-        #info-panel h1 {
-            margin: 0 0 8px;
-            font-size: 1.3rem;
-            color: #ffaa00;
-            text-align: center;
-            border-bottom: 1px solid #444;
-            padding-bottom: 4px;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 4px 0;
-        }
-        .label {
-            color: #aaa;
-        }
-        .value {
+            font-size: 18px;
             font-weight: bold;
-            color: #ffaa00;
-        }
-        #divine-signals {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #444;
-        }
-        .signal-gps { color: #88ff88; }
-        .signal-cam { color: #ff8888; }
-        
-        #memory-panel {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #ccc;
-            padding: 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            max-height: 120px;
-            overflow-y: auto;
-            backdrop-filter: blur(5px);
-            border: 1px solid #333;
-            z-index: 100;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
+            text-shadow: 2px 2px 0 #000;
             pointer-events: none;
         }
-        #memory-panel div {
-            margin-bottom: 4px;
-            border-left: 2px solid #ffaa00;
-            padding-left: 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 30px;
+            z-index: 100;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
         }
-        
-        #controls-overlay {
+        #gameover {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            background: black;
+            padding: 30px 50px;
+            border-radius: 20px;
+            z-index: 200;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            border: 4px solid white;
+            display: none;
+            pointer-events: none;
+            text-shadow: 4px 4px 0 #ff0;
+        }
+        #restart {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff0;
+            color: #00f;
+            border: 4px solid #00f;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 60px;
+            z-index: 300;
+            display: none;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 20px #ff0;
+        }
+        #status {
             position: absolute;
             bottom: 20px;
-            right: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 200;
+            left: 20px;
+            color: #aaa;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
         }
-        .ctrl-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 25px;
-            background: rgba(0,0,0,0.6);
-            border: 2px solid #ffaa00;
-            color: white;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-            cursor: pointer;
-            pointer-events: auto;
-            user-select: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-        .ctrl-btn:active {
-            background: #ffaa00;
-            color: black;
-        }
-        
-        #start-panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            color: white;
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-            backdrop-filter: blur(10px);
-        }
-        #start-panel h1 {
-            color: #ffaa00;
-            margin-bottom: 20px;
-        }
-        #start-panel button {
-            background: #ffaa00;
-            border: none;
-            color: black;
-            font-size: 1.2rem;
-            padding: 15px 30px;
-            border-radius: 40px;
-            margin: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255,170,0,0.5);
-            border: 2px solid #fff;
-            min-width: 200px;
-        }
-        #start-panel button:active {
-            transform: scale(0.95);
-        }
-        #permission-warning {
-            color: #ff6666;
-            margin-top: 20px;
+        video {
             display: none;
-        }
-        @media (min-width: 600px) {
-            #info-panel, #memory-panel {
-                left: 20px;
-                right: auto;
-                width: 320px;
-            }
-            #memory-panel {
-                bottom: 20px;
-            }
         }
     </style>
 </head>
 <body>
-    <div id="start-panel">
-        <h1>🌍 Simulación Divina</h1>
-        <p>Concede permisos para que el agente reciba señales del mundo real.</p>
-        <button id="btn-start">▶ Iniciar Simulación</button>
-        <div id="permission-warning">
-            ⚠️ Permisos denegados. El agente funcionará sin señales divinas.
-        </div>
-    </div>
+    <div id="info">❤️ x <span id="lives">3</span></div>
+    <div id="score">🍒 <span id="points">0</span></div>
+    <div id="gameover">GAME OVER</div>
+    <div id="restart">VOLVER A JUGAR</div>
+    <div id="status">Inicializando...</div>
 
-    <div id="info-panel" style="display: none;">
-        <h1>🔮 Estado del Agente</h1>
-        <div class="info-row"><span class="label">Estado:</span> <span id="state-value" class="value">—</span></div>
-        <div class="info-row"><span class="label">Hambre:</span> <span id="hunger-value" class="value">—</span></div>
-        <div class="info-row"><span class="label">Velocidad:</span> <span id="speed-value" class="value">—</span></div>
-        <div id="divine-signals">
-            <div class="info-row"><span class="label">🌍 GPS:</span> <span id="gps-signal" class="value signal-gps">—</span></div>
-            <div class="info-row"><span class="label">📷 Cámara:</span> <span id="cam-signal" class="value signal-cam">—</span></div>
-        </div>
-    </div>
-
-    <div id="memory-panel" style="display: none;">
-        <strong>🧠 Memoria del Agente</strong>
-        <div id="memory-list"></div>
-    </div>
-
-    <div id="controls-overlay">
-        <div class="ctrl-btn" id="toggle-info">👁️</div>
-        <div class="ctrl-btn" id="reset-cam">🎯</div>
-    </div>
-
-    <!-- Importación de módulos -->
+    <!-- Importamos Three.js y OrbitControls (opcional, para depuración) -->
     <script type="importmap">
         {
             "imports": {
                 "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/",
-                "rapier": "https://unpkg.com/@dimforge/rapier3d-compat@0.11.0/rapier.es.js"
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
             }
         }
     </script>
 
     <script type="module">
-        // --- Importaciones ---
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import * as RAPIER from 'rapier';
 
-        // --- Variables globales ---
-        let scene, camera, renderer, controls, world;
-        let agent = {
-            mesh: null,
-            rigidBody: null,
-            state: 'EXPLORING',
-            hunger: 30,
-            maxHunger: 100,
-            hungerRate: 2, // por segundo
-            speed: 4.0,
-            divineSpeedMod: 1.0,
-            memory: [],
-            targetFood: null,
-            exploreTarget: null
-        };
-        let foodItems = [];
-        let divineSignals = {
-            gps: { bioma: 'desconocido', weather: 'soleado' },
-            camera: { mood: 'neutral' }
-        };
-        let clock = new THREE.Clock();
-        let gameActive = false;
-        let rapiersInitialized = false;
+        // --- Configuración inicial ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111122); // Color de fondo mientras la cámara no está lista
 
-        // Elementos UI
-        const startPanel = document.getElementById('start-panel');
-        const btnStart = document.getElementById('btn-start');
-        const infoPanel = document.getElementById('info-panel');
-        const memoryPanel = document.getElementById('memory-panel');
-        const stateEl = document.getElementById('state-value');
-        const hungerEl = document.getElementById('hunger-value');
-        const speedEl = document.getElementById('speed-value');
-        const gpsSignalEl = document.getElementById('gps-signal');
-        const camSignalEl = document.getElementById('cam-signal');
-        const memoryListEl = document.getElementById('memory-list');
-        const permissionWarning = document.getElementById('permission-warning');
-        const toggleInfoBtn = document.getElementById('toggle-info');
-        const resetCamBtn = document.getElementById('reset-cam');
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 10); // Vista en tercera persona, pero la cámara real se usará como textura
 
-        // --- Funciones auxiliares ---
-        function addMemory(msg) {
-            agent.memory.unshift(`[${new Date().toLocaleTimeString()}] ${msg}`);
-            if (agent.memory.length > 6) agent.memory.pop();
-            memoryListEl.innerHTML = agent.memory.map(m => `<div>${m}</div>`).join('');
-        }
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
-        // --- Inicialización de Three.js y Rapier ---
-        async function initScene() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x111122);
-            scene.fog = new THREE.Fog(0x111122, 20, 80);
+        // Controles solo para depuración en PC (los desactivamos en móvil)
+        // const controls = new OrbitControls(camera, renderer.domElement);
+        // controls.enableDamping = true;
 
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(15, 12, 20);
+        // --- Elementos del juego ---
+        let playerPosition = { lat: 0, lon: 0, heading: 0 }; // Posición real del jugador (se actualiza con GPS)
+        let playerObject = new THREE.Object3D(); // Representación interna (no visible)
+        playerObject.position.set(0, 0, 0); // El mundo Three.js se centrará en el jugador
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limitar en móviles
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(renderer.domElement);
+        // Pellets (puntos amarillos) y power pellets
+        let pellets = [];
+        let ghosts = [];
+        let lives = 3;
+        let score = 0;
+        let gameActive = true;
+        let powerMode = false;
+        let powerTimer = null;
 
-            // Controles táctiles
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2.3;
-            controls.target.set(0, 2, 0);
-            controls.enableZoom = true;
-            controls.enablePan = true;
-            controls.rotateSpeed = 0.8;
-            controls.zoomSpeed = 1.0;
-            controls.panSpeed = 0.8;
+        // UI elements
+        const livesSpan = document.getElementById('lives');
+        const pointsSpan = document.getElementById('points');
+        const gameoverDiv = document.getElementById('gameover');
+        const restartBtn = document.getElementById('restart');
+        const statusDiv = document.getElementById('status');
 
-            // Luces
-            const ambient = new THREE.AmbientLight(0x404060);
-            scene.add(ambient);
-            
-            const dirLight = new THREE.DirectionalLight(0xfff5d1, 1.2);
-            dirLight.position.set(10, 30, 10);
-            dirLight.castShadow = true;
-            dirLight.receiveShadow = true;
-            dirLight.shadow.mapSize.width = 1024;
-            dirLight.shadow.mapSize.height = 1024;
-            const d = 30;
-            dirLight.shadow.camera.left = -d;
-            dirLight.shadow.camera.right = d;
-            dirLight.shadow.camera.top = d;
-            dirLight.shadow.camera.bottom = -d;
-            dirLight.shadow.camera.near = 1;
-            dirLight.shadow.camera.far = 60;
-            scene.add(dirLight);
+        // --- Configuración de la cámara real como textura de fondo ---
+        let videoElement = document.createElement('video');
+        videoElement.autoplay = true;
+        videoElement.playsInline = true;
+        videoElement.style.display = 'none';
+        document.body.appendChild(videoElement);
 
-            const fillLight = new THREE.PointLight(0x4466ff, 0.3);
-            fillLight.position.set(-10, 10, -10);
-            scene.add(fillLight);
-
-            // Inicializar Rapier
-            await RAPIER.init();
-            const gravity = { x: 0.0, y: -9.81, z: 0.0 };
-            world = new RAPIER.World(gravity);
-
-            // Crear terreno
-            createTerrain();
-            
-            // Crear agente
-            createAgent();
-            
-            // Crear comida inicial
-            for (let i = 0; i < 6; i++) spawnFood();
-
-            gameActive = true;
-            rapiersInitialized = true;
-            animate();
-        }
-
-        // --- Terreno con trimesh (más compatible) ---
-        function createTerrain() {
-            const width = 50;
-            const depth = 50;
-            const segments = 64;
-
-            // Generar geometría con alturas
-            const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
-            geometry.rotateX(-Math.PI / 2);
-            
-            const vertices = geometry.attributes.position.array;
-            const positions = [];
-            
-            for (let i = 0; i <= segments; i++) {
-                for (let j = 0; j <= segments; j++) {
-                    const idx = (i * (segments + 1) + j) * 3;
-                    const x = vertices[idx];
-                    const z = vertices[idx + 2];
-                    
-                    // Ruido simple: ondas
-                    const y = Math.sin(x * 0.15) * Math.cos(z * 0.2) * 2.5
-                            + Math.sin(x * 0.4) * 1.2
-                            + Math.cos(z * 0.3) * 1.5;
-                    
-                    vertices[idx + 1] = y; // asignar altura
-                    positions.push(x, y, z);
-                }
-            }
-            
-            geometry.attributes.position.needsUpdate = true;
-            geometry.computeVertexNormals();
-
-            const material = new THREE.MeshStandardMaterial({ 
-                color: 0x6b8e4c, 
-                roughness: 0.8, 
-                metalness: 0.1,
-                emissive: 0x000000
+        // Intentar acceder a la cámara trasera
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { exact: "environment" } // Cámara trasera
+                },
+                audio: false
+            }).then(function(stream) {
+                videoElement.srcObject = stream;
+                videoElement.play();
+                statusDiv.innerHTML = 'Cámara OK';
+                
+                // Crear textura de video para el fondo
+                const videoTexture = new THREE.VideoTexture(videoElement);
+                videoTexture.minFilter = THREE.LinearFilter;
+                videoTexture.magFilter = THREE.LinearFilter;
+                videoTexture.format = THREE.RGBAFormat;
+                
+                // Hacer que el fondo de la escena sea la textura de video
+                scene.background = videoTexture;
+                
+                // Ajustar la relación de aspecto si es necesario (la cámara de Three.js debe coincidir)
+                // Nota: Para un efecto perfecto, deberíamos ajustar la cámara de Three.js al aspect ratio del video,
+                // pero aquí usamos la cámara perspectiva normal. La textura de fondo se estirará para llenar la pantalla.
+                // Una alternativa es usar un plano gigante siempre frente a la cámara, pero es más complejo.
+            }).catch(function(error) {
+                statusDiv.innerHTML = 'Error cámara: ' + error.message;
+                console.error(error);
+                // Usar un color de fondo si no hay cámara
+                scene.background = new THREE.Color(0x87CEEB);
             });
-            const terrainMesh = new THREE.Mesh(geometry, material);
-            terrainMesh.receiveShadow = true;
-            terrainMesh.castShadow = false;
-            scene.add(terrainMesh);
-
-            // Crear collider trimesh a partir de los vértices y triángulos
-            // Necesitamos extraer índices (la geometría tiene índices por defecto)
-            const indices = geometry.index.array;
-            const verticesArray = new Float32Array(positions);
-            
-            // Crear collider estático
-            const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(0, 0, 0);
-            const rigidBody = world.createRigidBody(rigidBodyDesc);
-            
-            const colliderDesc = RAPIER.ColliderDesc.trimesh(verticesArray, indices);
-            world.createCollider(colliderDesc, rigidBody);
+        } else {
+            statusDiv.innerHTML = 'API de cámara no soportada';
+            scene.background = new THREE.Color(0x87CEEB);
         }
 
-        // --- Creación del agente ---
-        function createAgent() {
-            const group = new THREE.Group();
-            
-            // Cuerpo principal
-            const bodyGeo = new THREE.SphereGeometry(1, 16, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x331100 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.castShadow = true;
-            body.receiveShadow = true;
-            group.add(body);
-            
-            // Ojos
-            const eyeGeo = new THREE.SphereGeometry(0.2, 8);
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-            
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(0.5, 0.3, 0.9);
-            group.add(eyeL);
-            const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6), pupilMat);
-            pupilL.position.set(0.5, 0.3, 1.1);
-            group.add(pupilL);
-            
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(-0.5, 0.3, 0.9);
-            group.add(eyeR);
-            const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6), pupilMat);
-            pupilR.position.set(-0.5, 0.3, 1.1);
-            group.add(pupilR);
-            
-            // Gorro (opcional)
-            const hatGeo = new THREE.ConeGeometry(0.6, 0.8, 8);
-            const hatMat = new THREE.MeshStandardMaterial({ color: 0xaa44ff });
-            const hat = new THREE.Mesh(hatGeo, hatMat);
-            hat.position.set(0, 1.2, 0);
-            hat.rotation.x = 0.1;
-            group.add(hat);
+        // --- Luces (para que los modelos 3D se vean bien) ---
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 2, 1);
+        scene.add(directionalLight);
+        
+        // Una luz puntual que sigue al jugador para iluminar los objetos cercanos
+        const playerLight = new THREE.PointLight(0xffaa00, 0.5, 20);
+        playerLight.position.set(0, 5, 0);
+        scene.add(playerLight);
 
-            scene.add(group);
-            
-            // Cuerpo rígido dinámico
-            const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-                .setTranslation(0, 5, 0)
-                .lockRotations(); // Evita que ruede
-            const rigidBody = world.createRigidBody(rigidBodyDesc);
-            
-            const colliderDesc = RAPIER.ColliderDesc.ball(1)
-                .setDensity(1.0)
-                .setRestitution(0.1);
-            world.createCollider(colliderDesc, rigidBody);
-            
-            agent.mesh = group;
-            agent.rigidBody = rigidBody;
+        // --- Crear algunos puntos de referencia visuales (suelo, ejes) - Opcional, pero puede ayudar ---
+        const gridHelper = new THREE.GridHelper(50, 20, 0xff00ff, 0x333333);
+        gridHelper.visible = false; // Oculto para no estorbar la vista real
+        scene.add(gridHelper);
+
+        // --- Sistema de coordenadas: el mundo Three.js se centrará en el jugador.
+        // Los objetos se colocan en coordenadas relativas (en metros) a la posición GPS actual.
+        // Convertimos diferencias de lat/lon a metros usando una aproximación simple:
+        // 1 grado lat ~ 111320 m, 1 grado lon ~ 111320 * cos(lat) m.
+        let originLat = null;
+        let originLon = null;
+
+        function latLonToMeters(lat, lon, refLat, refLon) {
+            if (refLat === undefined || refLon === undefined) return { x: 0, z: 0 };
+            const dx = (lon - refLon) * 111320 * Math.cos(refLat * Math.PI/180);
+            const dz = (lat - refLat) * 111320;
+            return { x: dx, z: -dz }; // Invertimos z para que norte sea -z (Three.js coordenadas)
         }
 
-        // --- Generar comida ---
-        function spawnFood() {
-            // Posición aleatoria sobre el terreno
-            const range = 20;
-            const x = (Math.random() - 0.5) * range * 2;
-            const z = (Math.random() - 0.5) * range * 2;
-            // Calcular altura (mismo ruido que el terreno)
-            const y = Math.sin(x * 0.15) * Math.cos(z * 0.2) * 2.5
-                    + Math.sin(x * 0.4) * 1.2
-                    + Math.cos(z * 0.3) * 1.5 + 0.5;
-            
-            const foodMat = new THREE.MeshStandardMaterial({ color: 0xff3333, emissive: 0x440000 });
-            const foodGeo = new THREE.SphereGeometry(0.6, 8);
-            const foodMesh = new THREE.Mesh(foodGeo, foodMat);
-            foodMesh.castShadow = true;
-            foodMesh.receiveShadow = true;
-            foodMesh.position.set(x, y, z);
-            scene.add(foodMesh);
-            
-            // Cuerpo estático sensor
-            const rigidBodyDesc = RAPIER.RigidBodyDesc.fixed()
-                .setTranslation(x, y, z);
-            const rigidBody = world.createRigidBody(rigidBodyDesc);
-            
-            const colliderDesc = RAPIER.ColliderDesc.ball(0.6)
-                .setSensor(true);
-            world.createCollider(colliderDesc, rigidBody);
-            
-            foodItems.push({ mesh: foodMesh, rigidBody });
-        }
-
-        // --- Lógica del agente ---
-        function updateAgent(delta) {
-            if (!agent.rigidBody || !gameActive) return;
-            
-            // Aumentar hambre
-            agent.hunger = Math.min(agent.maxHunger, agent.hunger + agent.hungerRate * delta);
-            
-            // Detectar comida cercana
-            const agentPos = agent.rigidBody.translation();
-            let nearestFood = null;
-            let minDist = Infinity;
-            
-            for (let food of foodItems) {
-                const foodPos = food.rigidBody.translation();
-                const dist = Math.sqrt(
-                    (agentPos.x - foodPos.x)**2 + 
-                    (agentPos.z - foodPos.z)**2
-                );
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearestFood = food;
-                }
-                if (dist < 1.5) {
-                    // Comer
-                    eatFood(food);
-                }
-            }
-            
-            // Máquina de estados
-            if (agent.hunger > 70) {
-                agent.state = 'SEEKING_FOOD';
-            } else if (agent.hunger < 30 && agent.state === 'SEEKING_FOOD') {
-                agent.state = 'EXPLORING';
-                agent.targetFood = null;
-                addMemory('Ya no tengo hambre, sigo explorando');
-            }
-            
-            // Velocidad base con mod divino
-            const currentSpeed = agent.speed * agent.divineSpeedMod;
-            
-            if (agent.state === 'EXPLORING') {
-                // Movimiento aleatorio
-                if (!agent.exploreTarget || Math.random() < 0.005) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const dist = 8 + Math.random() * 8;
-                    const tx = agentPos.x + Math.cos(angle) * dist;
-                    const tz = agentPos.z + Math.sin(angle) * dist;
-                    agent.exploreTarget = new THREE.Vector3(tx, 0, tz);
-                }
-                if (agent.exploreTarget) {
-                    moveToward(agent.exploreTarget, currentSpeed);
-                }
-            } else if (agent.state === 'SEEKING_FOOD' && nearestFood) {
-                agent.targetFood = nearestFood;
-                const foodPos = nearestFood.rigidBody.translation();
-                moveToward(new THREE.Vector3(foodPos.x, 0, foodPos.z), currentSpeed * 1.3);
-            } else {
-                // Si no hay comida cerca, seguir explorando
-                agent.state = 'EXPLORING';
-            }
-            
-            // Actualizar UI
-            stateEl.textContent = agent.state;
-            hungerEl.textContent = Math.round(agent.hunger) + '%';
-            speedEl.textContent = agent.divineSpeedMod.toFixed(2) + 'x';
-        }
-
-        function moveToward(target, speed) {
-            const pos = agent.rigidBody.translation();
-            const dx = target.x - pos.x;
-            const dz = target.z - pos.z;
-            const len = Math.sqrt(dx*dx + dz*dz);
-            if (len > 0.5) {
-                const normX = dx / len;
-                const normZ = dz / len;
-                const currentVel = agent.rigidBody.linvel();
-                agent.rigidBody.setLinvel({ x: normX * speed, y: currentVel.y, z: normZ * speed }, true);
-            } else {
-                agent.rigidBody.setLinvel({ x: 0, y: agent.rigidBody.linvel().y, z: 0 }, true);
-            }
-        }
-
-        function eatFood(food) {
-            const index = foodItems.indexOf(food);
-            if (index > -1) {
-                scene.remove(food.mesh);
-                world.removeRigidBody(food.rigidBody);
-                foodItems.splice(index, 1);
-                
-                agent.hunger = Math.max(0, agent.hunger - 50);
-                addMemory('Ñam! Comida deliciosa');
-                
-                // Generar nueva comida
-                spawnFood();
-            }
-        }
-
-        // --- Señales divinas (GPS y Cámara) ---
-        function initDivineSignals() {
-            // GPS
+        // --- Inicializar GPS ---
+        function startGPS() {
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(
                     (pos) => {
-                        const lat = pos.coords.latitude;
-                        // Determinar bioma básico
-                        if (lat > 50) {
-                            divineSignals.gps.bioma = 'tundra';
-                            divineSignals.gps.weather = 'frío';
-                        } else if (lat > 30) {
-                            divineSignals.gps.bioma = 'templado';
-                            divineSignals.gps.weather = 'lluvioso';
-                        } else if (lat < -30) {
-                            divineSignals.gps.bioma = 'antártico';
-                            divineSignals.gps.weather = 'nevado';
-                        } else {
-                            divineSignals.gps.bioma = 'tropical';
-                            divineSignals.gps.weather = 'cálido';
+                        const { latitude, longitude, heading } = pos.coords;
+                        if (originLat === null) {
+                            originLat = latitude;
+                            originLon = longitude;
+                            statusDiv.innerHTML = 'GPS fijado';
+                            
+                            // Generar algunos pellets alrededor de la posición inicial
+                            generatePellets(originLat, originLon);
+                            generateGhosts(originLat, originLon);
                         }
-                        gpsSignalEl.textContent = `${divineSignals.gps.bioma} (${divineSignals.gps.weather})`;
                         
-                        // Cambiar ambiente
-                        if (divineSignals.gps.weather === 'frío') {
-                            scene.background.setHex(0xaaccff);
-                            scene.fog.color.setHex(0xaaccff);
-                        } else if (divineSignals.gps.weather === 'lluvioso') {
-                            scene.background.setHex(0x557799);
-                            scene.fog.color.setHex(0x557799);
-                        } else {
-                            scene.background.setHex(0x87CEEB);
-                            scene.fog.color.setHex(0x87CEEB);
-                        }
-                        addMemory(`Señal GPS: ${divineSignals.gps.bioma}`);
+                        playerPosition.lat = latitude;
+                        playerPosition.lon = longitude;
+                        playerPosition.heading = heading || 0; // heading en grados, 0 = norte
+                        
+                        // Actualizar la posición de la cámara virtual? No, la cámara Three.js debe seguir al jugador.
+                        // Pero los objetos se mueven relativos al jugador.
+                        
+                        // Actualizar la luz que sigue al jugador
+                        playerLight.position.set(0, 5, 0);
+                        
+                        // Para debug
+                        // statusDiv.innerHTML = `Lat: ${latitude.toFixed(6)}, Lon: ${longitude.toFixed(6)}`;
                     },
-                    (err) => {
-                        console.warn('GPS error:', err);
-                        gpsSignalEl.textContent = 'No disponible';
-                        permissionWarning.style.display = 'block';
+                    (error) => {
+                        statusDiv.innerHTML = 'Error GPS: ' + error.message;
                     },
-                    { enableHighAccuracy: false, maximumAge: 60000 }
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: 10000
+                    }
                 );
             } else {
-                gpsSignalEl.textContent = 'No soportado';
-            }
-
-            // Cámara
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                    .then((stream) => {
-                        const video = document.createElement('video');
-                        video.srcObject = stream;
-                        video.play();
-                        video.style.display = 'none';
-                        document.body.appendChild(video);
-                        
-                        setInterval(() => {
-                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                                const canvas = document.createElement('canvas');
-                                canvas.width = 80;
-                                canvas.height = 60;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                                
-                                let r = 0, g = 0, b = 0;
-                                for (let i = 0; i < data.length; i += 4) {
-                                    r += data[i];
-                                    g += data[i+1];
-                                    b += data[i+2];
-                                }
-                                const pixels = data.length / 4;
-                                r = Math.round(r / pixels);
-                                g = Math.round(g / pixels);
-                                b = Math.round(b / pixels);
-                                
-                                // Determinar ánimo
-                                if (r > g && r > b) {
-                                    divineSignals.camera.mood = 'cálido';
-                                    agent.divineSpeedMod = 1.3;
-                                } else if (g > r && g > b) {
-                                    divineSignals.camera.mood = 'tranquilo';
-                                    agent.divineSpeedMod = 1.0;
-                                } else if (b > r && b > g) {
-                                    divineSignals.camera.mood = 'frío';
-                                    agent.divineSpeedMod = 0.7;
-                                } else {
-                                    divineSignals.camera.mood = 'neutral';
-                                    agent.divineSpeedMod = 1.0;
-                                }
-                                
-                                camSignalEl.textContent = `${divineSignals.camera.mood} (${r},${g},${b})`;
-                                
-                                // Cambiar color del agente según ánimo
-                                if (agent.mesh) {
-                                    const body = agent.mesh.children[0];
-                                    if (body) {
-                                        if (divineSignals.camera.mood === 'cálido') body.material.color.setHex(0xff6600);
-                                        else if (divineSignals.camera.mood === 'frío') body.material.color.setHex(0x3399ff);
-                                        else body.material.color.setHex(0xffaa00);
-                                    }
-                                }
-                            }
-                        }, 3000);
-                    })
-                    .catch((err) => {
-                        console.warn('Camera error:', err);
-                        camSignalEl.textContent = 'No disponible';
-                        permissionWarning.style.display = 'block';
-                    });
-            } else {
-                camSignalEl.textContent = 'No soportado';
+                statusDiv.innerHTML = 'GPS no soportado';
             }
         }
 
-        // --- Animación ---
-        function animate() {
-            if (!gameActive || !rapiersInitialized) return;
-            
-            requestAnimationFrame(animate);
-            
-            const delta = Math.min(clock.getDelta(), 0.1);
-            
-            // Paso de física
-            world.step();
-            
-            // Actualizar agente
-            updateAgent(delta);
-            
-            // Sincronizar mesh con cuerpo rígido
-            if (agent.mesh && agent.rigidBody) {
-                const pos = agent.rigidBody.translation();
-                agent.mesh.position.set(pos.x, pos.y, pos.z);
-                // rotación no aplicada porque lockRotations, pero podemos orientar hacia movimiento
-                const vel = agent.rigidBody.linvel();
-                if (Math.abs(vel.x) > 0.1 || Math.abs(vel.z) > 0.1) {
-                    const angle = Math.atan2(vel.x, vel.z);
-                    agent.mesh.rotation.y = angle;
+        // --- Generar pellets (puntos amarillos) en un área alrededor de la posición inicial ---
+        function generatePellets(centerLat, centerLon) {
+            // Crear una cuadrícula de 10x10 puntos separados 5 metros
+            for (let i = -4; i <= 4; i++) {
+                for (let j = -4; j <= 4; j++) {
+                    // Saltar algunos para que no sea demasiado denso
+                    if (Math.random() > 0.5) continue;
+                    
+                    // Desplazamiento en metros
+                    const offsetX = i * 8 + (Math.random() - 0.5) * 4;
+                    const offsetZ = j * 8 + (Math.random() - 0.5) * 4;
+                    
+                    // Convertir offset a lat/lon aproximado (para guardar referencia)
+                    const latOffset = offsetZ / 111320;
+                    const lonOffset = offsetX / (111320 * Math.cos(centerLat * Math.PI/180));
+                    
+                    const pelletLat = centerLat + latOffset;
+                    const pelletLon = centerLon + lonOffset;
+                    
+                    // Crear modelo 3D
+                    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+                    const material = new THREE.MeshStandardMaterial({ color: 0xffdd00, emissive: 0x442200 });
+                    const pellet = new THREE.Mesh(geometry, material);
+                    
+                    // Posición relativa al origen (centro de la escena)
+                    const pos = latLonToMeters(pelletLat, pelletLon, centerLat, centerLon);
+                    pellet.position.set(pos.x, 0.5, pos.z);
+                    
+                    scene.add(pellet);
+                    
+                    // Guardar datos del pellet
+                    pellets.push({
+                        mesh: pellet,
+                        lat: pelletLat,
+                        lon: pelletLon,
+                        type: 'normal'
+                    });
                 }
             }
             
-            controls.update();
-            renderer.render(scene, camera);
+            // Añadir algunos power pellets (más grandes)
+            for (let k = 0; k < 3; k++) {
+                const angle = (k / 3) * Math.PI * 2;
+                const dist = 15;
+                const offsetX = Math.cos(angle) * dist;
+                const offsetZ = Math.sin(angle) * dist;
+                
+                const latOffset = offsetZ / 111320;
+                const lonOffset = offsetX / (111320 * Math.cos(centerLat * Math.PI/180));
+                
+                const pelletLat = centerLat + latOffset;
+                const pelletLon = centerLon + lonOffset;
+                
+                const geometry = new THREE.SphereGeometry(0.8, 20, 20);
+                const material = new THREE.MeshStandardMaterial({ color: 0xff5500, emissive: 0x442200 });
+                const pellet = new THREE.Mesh(geometry, material);
+                
+                const pos = latLonToMeters(pelletLat, pelletLon, centerLat, centerLon);
+                pellet.position.set(pos.x, 0.8, pos.z);
+                
+                scene.add(pellet);
+                
+                pellets.push({
+                    mesh: pellet,
+                    lat: pelletLat,
+                    lon: pelletLon,
+                    type: 'power'
+                });
+            }
         }
 
-        // --- Eventos de UI ---
-        btnStart.addEventListener('click', async () => {
-            startPanel.style.display = 'none';
-            infoPanel.style.display = 'block';
-            memoryPanel.style.display = 'block';
+        // --- Generar fantasmas (modelos simples) ---
+        function generateGhosts(centerLat, centerLon) {
+            const colors = [0xff0000, 0xffaacc, 0x00ffff, 0xffaa00]; // rojo, rosa, cian, naranja
+            const names = ['Blinky', 'Pinky', 'Inky', 'Clyde'];
             
-            await initScene();
-            initDivineSignals();
-            
-            addMemory('El agente ha despertado en un mundo nuevo.');
-        });
-
-        toggleInfoBtn.addEventListener('click', () => {
-            if (infoPanel.style.opacity === '0') {
-                infoPanel.style.opacity = '1';
-                memoryPanel.style.opacity = '1';
-            } else {
-                infoPanel.style.opacity = '0';
-                memoryPanel.style.opacity = '0';
+            for (let i = 0; i < 4; i++) {
+                // Posición inicial aleatoria alrededor
+                const angle = (i / 4) * Math.PI * 2;
+                const dist = 20 + i * 5;
+                const offsetX = Math.cos(angle) * dist;
+                const offsetZ = Math.sin(angle) * dist;
+                
+                const latOffset = offsetZ / 111320;
+                const lonOffset = offsetX / (111320 * Math.cos(centerLat * Math.PI/180));
+                
+                const ghostLat = centerLat + latOffset;
+                const ghostLon = centerLon + lonOffset;
+                
+                // Crear modelo (un cubo con una semiesfera arriba para simular fantasma)
+                const group = new THREE.Group();
+                
+                // Cuerpo (semiesfera)
+                const bodyGeo = new THREE.SphereGeometry(0.8, 16, 16);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: colors[i], emissive: 0x222222 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.scale.set(1, 0.8, 1);
+                body.position.y = 0.8;
+                group.add(body);
+                
+                // Ojos
+                const eyeGeo = new THREE.SphereGeometry(0.2, 8, 8);
+                const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const pupilGeo = new THREE.SphereGeometry(0.1, 6, 6);
+                const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+                
+                const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeL.position.set(-0.3, 1.0, 0.6);
+                group.add(eyeL);
+                const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
+                pupilL.position.set(-0.3, 1.0, 0.8);
+                group.add(pupilL);
+                
+                const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeR.position.set(0.3, 1.0, 0.6);
+                group.add(eyeR);
+                const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
+                pupilR.position.set(0.3, 1.0, 0.8);
+                group.add(pupilR);
+                
+                // Ondas abajo
+                const waveGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.2, 6);
+                const waveMat = new THREE.MeshStandardMaterial({ color: colors[i] });
+                for (let w = 0; w < 3; w++) {
+                    const wave = new THREE.Mesh(waveGeo, waveMat);
+                    wave.position.set(-0.4 + w*0.4, 0.2, 0);
+                    wave.rotation.x = Math.PI/2;
+                    group.add(wave);
+                }
+                
+                // Posicionar
+                const pos = latLonToMeters(ghostLat, ghostLon, centerLat, centerLon);
+                group.position.set(pos.x, 0, pos.z);
+                
+                scene.add(group);
+                
+                ghosts.push({
+                    mesh: group,
+                    lat: ghostLat,
+                    lon: ghostLon,
+                    color: colors[i],
+                    name: names[i],
+                    speed: 0.5 + i * 0.2, // velocidad de movimiento
+                    target: null
+                });
             }
-        });
+        }
 
-        resetCamBtn.addEventListener('click', () => {
-            camera.position.set(15, 12, 20);
-            controls.target.set(0, 2, 0);
-        });
+        // --- Actualizar posiciones de fantasmas (movimiento simple hacia el jugador) ---
+        function updateGhosts(playerLat, playerLon, refLat, refLon) {
+            if (!gameActive) return;
+            
+            ghosts.forEach(ghost => {
+                // Convertir posición del fantasma y del jugador a metros relativos al origen
+                const ghostPos = latLonToMeters(ghost.lat, ghost.lon, refLat, refLon);
+                const playerPos = latLonToMeters(playerLat, playerLon, refLat, refLon);
+                
+                // Vector dirección del fantasma al jugador
+                const dx = playerPos.x - ghostPos.x;
+                const dz = playerPos.z - ghostPos.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist > 1) {
+                    // Mover fantasma hacia el jugador
+                    const moveX = (dx / dist) * ghost.speed * 0.1; // factor de velocidad por frame
+                    const moveZ = (dz / dist) * ghost.speed * 0.1;
+                    
+                    // Actualizar lat/lon (aproximadamente)
+                    const deltaLat = -moveZ / 111320; // porque z invertido
+                    const deltaLon = moveX / (111320 * Math.cos(refLat * Math.PI/180));
+                    
+                    ghost.lat += deltaLat;
+                    ghost.lon += deltaLon;
+                }
+                
+                // Actualizar mesh position
+                const newPos = latLonToMeters(ghost.lat, ghost.lon, refLat, refLon);
+                ghost.mesh.position.set(newPos.x, 0, newPos.z);
+                
+                // Rotar para que mire hacia el jugador (opcional)
+                // ghost.mesh.lookAt(playerPos.x, 0, playerPos.z);
+            });
+        }
 
+        // --- Detectar colisiones con pellets ---
+        function checkPelletCollisions(playerLat, playerLon, refLat, refLon) {
+            if (!gameActive) return;
+            
+            const playerPos = latLonToMeters(playerLat, playerLon, refLat, refLon);
+            
+            for (let i = pellets.length - 1; i >= 0; i--) {
+                const pellet = pellets[i];
+                const pelletPos = latLonToMeters(pellet.lat, pellet.lon, refLat, refLon);
+                
+                const dx = pelletPos.x - playerPos.x;
+                const dz = pelletPos.z - playerPos.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < 2.0) { // Distancia de recolección
+                    if (pellet.type === 'normal') {
+                        score += 10;
+                    } else {
+                        score += 50;
+                        activatePowerMode();
+                    }
+                    
+                    scene.remove(pellet.mesh);
+                    pellets.splice(i, 1);
+                    
+                    // Actualizar UI
+                    pointsSpan.textContent = score;
+                    
+                    // Reproducir sonido (opcional, aquí solo visual)
+                    // Podríamos agregar un destello
+                }
+            }
+        }
+
+        // --- Detectar colisiones con fantasmas ---
+        function checkGhostCollisions(playerLat, playerLon, refLat, refLon) {
+            if (!gameActive) return;
+            
+            const playerPos = latLonToMeters(playerLat, playerLon, refLat, refLon);
+            
+            ghosts.forEach(ghost => {
+                const ghostPos = latLonToMeters(ghost.lat, ghost.lon, refLat, refLon);
+                const dx = ghostPos.x - playerPos.x;
+                const dz = ghostPos.z - playerPos.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < 2.0) { // Contacto
+                    if (powerMode) {
+                        // Comer fantasma
+                        // Lo teletransportamos lejos
+                        ghost.lat = refLat + (Math.random() - 0.5) * 0.001;
+                        ghost.lon = refLon + (Math.random() - 0.5) * 0.001;
+                        score += 200;
+                        pointsSpan.textContent = score;
+                    } else {
+                        // Perder vida
+                        lives--;
+                        livesSpan.textContent = lives;
+                        
+                        if (lives <= 0) {
+                            gameActive = false;
+                            gameoverDiv.style.display = 'block';
+                            restartBtn.style.display = 'block';
+                        } else {
+                            // Reubicar al jugador? No, mejor reubicar fantasmas lejos
+                            ghosts.forEach(g => {
+                                g.lat = refLat + (Math.random() - 0.5) * 0.002;
+                                g.lon = refLon + (Math.random() - 0.5) * 0.002;
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Modo poder (fantasmas azules) ---
+        function activatePowerMode() {
+            powerMode = true;
+            
+            // Cambiar color de fantasmas a azul
+            ghosts.forEach(ghost => {
+                ghost.mesh.children.forEach(child => {
+                    if (child.material && child.material.color) {
+                        if (child.material.color.getHex() === ghost.color) {
+                            child.material.color.setHex(0x0000ff);
+                        }
+                    }
+                });
+            });
+            
+            if (powerTimer) clearTimeout(powerTimer);
+            powerTimer = setTimeout(() => {
+                powerMode = false;
+                // Restaurar colores originales
+                ghosts.forEach((ghost, index) => {
+                    ghost.mesh.children.forEach(child => {
+                        if (child.material && child.material.color) {
+                            if (child.material.color.getHex() === 0x0000ff) {
+                                child.material.color.setHex(ghost.color);
+                            }
+                        }
+                    });
+                });
+            }, 10000); // 10 segundos de modo poder
+        }
+
+        // --- Reiniciar juego ---
+        function restartGame() {
+            lives = 3;
+            score = 0;
+            gameActive = true;
+            powerMode = false;
+            if (powerTimer) clearTimeout(powerTimer);
+            
+            livesSpan.textContent = lives;
+            pointsSpan.textContent = score;
+            gameoverDiv.style.display = 'none';
+            restartBtn.style.display = 'none';
+            
+            // Limpiar escena
+            pellets.forEach(p => scene.remove(p.mesh));
+            ghosts.forEach(g => scene.remove(g.mesh));
+            pellets = [];
+            ghosts = [];
+            
+            // Regenerar con la posición actual
+            if (originLat !== null) {
+                generatePellets(originLat, originLon);
+                generateGhosts(originLat, originLon);
+            }
+        }
+
+        restartBtn.addEventListener('click', restartGame);
+
+        // --- Iniciar GPS ---
+        startGPS();
+
+        // --- Animación y renderizado ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (originLat !== null && playerPosition.lat && playerPosition.lon && gameActive) {
+                // Actualizar posición de la cámara de Three.js para que siga al jugador?
+                // En lugar de mover la cámara, movemos el mundo al revés: centramos la escena en el jugador.
+                // Para que el jugador siempre esté en (0,0,0), desplazamos todos los objetos en dirección contraria.
+                // Esto es más eficiente que mover la cámara.
+                
+                // Obtenemos offset del jugador respecto al origen
+                const playerOffset = latLonToMeters(playerPosition.lat, playerPosition.lon, originLat, originLon);
+                
+                // Ajustamos todas las posiciones de los objetos restando el offset del jugador
+                // Pero como los objetos tienen coordenadas absolutas (en lat/lon), debemos actualizarlos constantemente.
+                // En lugar de eso, podríamos agrupar todo en un contenedor y desplazar el contenedor.
+                // Simplificamos: cada frame calculamos la posición de cada objeto relativa al jugador y la actualizamos.
+                
+                // Esto es costoso si hay muchos objetos, pero para esta demo está bien.
+                
+                // Actualizar posición de pellets
+                pellets.forEach(pellet => {
+                    const pos = latLonToMeters(pellet.lat, pellet.lon, originLat, originLon);
+                    // Relativo al jugador: restar playerOffset
+                    pellet.mesh.position.set(pos.x - playerOffset.x, pellet.mesh.position.y, pos.z - playerOffset.z);
+                });
+                
+                // Actualizar posición de fantasmas
+                ghosts.forEach(ghost => {
+                    const pos = latLonToMeters(ghost.lat, ghost.lon, originLat, originLon);
+                    ghost.mesh.position.set(pos.x - playerOffset.x, 0, pos.z - playerOffset.z);
+                });
+                
+                // La cámara de Three.js debe estar en el origen (0,0,0) mirando hacia adelante (dirección de la cámara real)
+                // Para que el jugador vea desde su posición, la cámara virtual debe estar en (0,0,0) y mirar hacia donde apunta el móvil.
+                // Podemos usar el heading del GPS para orientar la cámara, pero eso requiere brújula. 
+                // Por simplicidad, fijamos la cámara en (0, 1.6, 0) (altura de ojos) y la orientamos según la orientación del dispositivo con DeviceOrientation API.
+                // Eso es más complejo. Aquí simplemente ponemos la cámara en (0,1.6,0) mirando hacia -Z (norte) y el jugador rota el móvil.
+                // Lo dejamos así para esta demo.
+                
+                // Posicionar cámara a altura de ojos
+                camera.position.set(0, 1.6, 0);
+                camera.lookAt(0, 1.6, -10); // Mirando hacia adelante (dirección -Z)
+                
+                // Detectar colisiones
+                checkPelletCollisions(playerPosition.lat, playerPosition.lon, originLat, originLon);
+                checkGhostCollisions(playerPosition.lat, playerPosition.lon, originLat, originLon);
+                
+                // Mover fantasmas
+                updateGhosts(playerPosition.lat, playerPosition.lon, originLat, originLon);
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+
+        // --- Ajustar tamaño de ventana ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Manejar visibilidad de la página (pausar física si es necesario)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                // Podríamos pausar la lógica, pero por ahora no hacemos nada
-            }
-        });
+        // --- Orientación del dispositivo (para que la cámara virtual mire hacia donde apunta el móvil) ---
+        // Esto es opcional pero mejora la inmersión. Lo omitimos por simplicidad.
+        // Se puede implementar con DeviceOrientationEvent.
+
+        console.log('Juego iniciado');
     </script>
 </body>
 </html>
