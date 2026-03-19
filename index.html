@@ -3,26 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SPACE INVADERS: Edición Callejera - Mejorado</title>
+    <title>AR Space Invaders - Edición Callejera</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: 'Courier New', monospace;
-            touch-action: none;
-        }
-        #info {
+        body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; touch-action: none; }
+        #ui {
             position: absolute;
             top: 20px;
             left: 20px;
             color: white;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 30px;
-            z-index: 100;
-            font-size: 18px;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 0 #000;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 100;
             pointer-events: none;
         }
         #score {
@@ -30,63 +26,16 @@
             top: 20px;
             right: 20px;
             color: white;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 20px;
-            border-radius: 30px;
-            z-index: 100;
-            font-size: 18px;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 20px;
             font-weight: bold;
-            text-shadow: 2px 2px 0 #000;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 100;
             pointer-events: none;
         }
-        #gameover {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: red;
-            background: black;
-            padding: 30px 50px;
-            border-radius: 20px;
-            z-index: 200;
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            border: 4px solid white;
-            display: none;
-            pointer-events: none;
-            text-shadow: 4px 4px 0 #ff0;
-        }
-        #restart {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ff0;
-            color: #00f;
-            border: 4px solid #00f;
-            padding: 15px 40px;
-            font-size: 24px;
-            font-weight: bold;
-            border-radius: 60px;
-            z-index: 300;
-            display: none;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            box-shadow: 0 0 20px #ff0;
-        }
-        #status {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: #aaa;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 12px;
-            z-index: 100;
-        }
-        /* Mira (crosshair) */
         #crosshair {
             position: absolute;
             top: 50%;
@@ -94,34 +43,32 @@
             transform: translate(-50%, -50%);
             width: 40px;
             height: 40px;
+            border: 3px solid rgba(255, 0, 0, 0.8);
             border-radius: 50%;
-            border: 3px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 20px rgba(255,0,0,0.5);
             z-index: 150;
             pointer-events: none;
         }
-        #crosshair::before,
-        #crosshair::after {
+        #crosshair::before, #crosshair::after {
             content: '';
             position: absolute;
-            background: white;
-            box-shadow: 0 0 5px red;
+            background: rgba(255,0,0,0.8);
+            box-shadow: 0 0 10px red;
         }
         #crosshair::before {
             top: 50%;
-            left: -10px;
-            width: 60px;
-            height: 2px;
+            left: -15px;
+            width: 70px;
+            height: 3px;
             transform: translateY(-50%);
         }
         #crosshair::after {
             left: 50%;
-            top: -10px;
-            width: 2px;
-            height: 60px;
+            top: -15px;
+            width: 3px;
+            height: 70px;
             transform: translateX(-50%);
         }
-        /* Botón de disparo */
         #shoot-btn {
             position: absolute;
             bottom: 40px;
@@ -129,82 +76,113 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background: rgba(255, 0, 0, 0.8);
+            background: rgba(255, 0, 0, 0.9);
             border: 5px solid white;
-            box-shadow: 0 0 20px red;
+            box-shadow: 0 0 30px red;
             z-index: 200;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            text-transform: uppercase;
             user-select: none;
-            touch-action: manipulation;
             cursor: pointer;
-            transition: transform 0.1s;
+            transition: transform 0.1s, background 0.1s;
+            backdrop-filter: blur(5px);
         }
         #shoot-btn:active {
-            transform: scale(0.9);
-            background: rgba(200, 0, 0, 0.9);
+            transform: scale(0.85);
+            background: rgba(200, 0, 0, 1);
         }
-        video {
-            display: none;
-        }
-        /* Mensaje de permiso de orientación */
-        #orientation-prompt {
+        #gameover {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.9);
             color: white;
-            padding: 20px;
-            border-radius: 20px;
-            z-index: 400;
-            text-align: center;
-            border: 2px solid #0f0;
+            padding: 40px 60px;
+            border-radius: 30px;
+            font-size: 48px;
+            font-weight: bold;
+            border: 4px solid #ff0;
             display: none;
+            z-index: 300;
+            text-align: center;
+            backdrop-filter: blur(10px);
         }
-        #orientation-prompt button {
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 18px;
-            background: #0f0;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-        /* Contador de marcianos (debug) */
-        #enemy-count {
+        #restart {
             position: absolute;
-            top: 80px;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff0;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            border-radius: 60px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            z-index: 310;
+            box-shadow: 0 0 20px #ff0;
+        }
+        #status {
+            position: absolute;
+            bottom: 20px;
             left: 20px;
-            color: white;
-            background: rgba(0,0,0,0.5);
+            color: #ccc;
+            background: rgba(0,0,0,0.4);
             padding: 5px 10px;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 12px;
             z-index: 100;
+        }
+        video { display: none; }
+        #orientation-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+            font-size: 24px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        #orientation-overlay button {
+            margin-top: 30px;
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #0f0;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="info">❤️ x <span id="lives">3</span></div>
+    <div id="ui">❤️ <span id="lives">3</span></div>
     <div id="score">👾 <span id="points">0</span></div>
-    <div id="enemy-count">Marcianos: <span id="enemy-count-value">0</span></div>
+    <div id="crosshair"></div>
+    <div id="shoot-btn">🔫</div>
     <div id="gameover">GAME OVER</div>
     <div id="restart">VOLVER A JUGAR</div>
     <div id="status">Inicializando...</div>
-    <div id="crosshair"></div>
-    <div id="shoot-btn">🔫</div>
-    <div id="orientation-prompt">
-        <p>Necesitamos acceso a la orientación del dispositivo para apuntar.</p>
-        <button id="request-orientation">Permitir</button>
+    <div id="orientation-overlay" style="display: none;">
+        <div>Necesitamos acceso a la orientación del dispositivo para apuntar.</div>
+        <button id="request-orientation">Permitir acceso</button>
     </div>
 
-    <!-- Importamos Three.js -->
+    <!-- Import Three.js desde CDN -->
     <script type="importmap">
         {
             "imports": {
@@ -218,493 +196,422 @@
 
         // --- Configuración inicial ---
         const scene = new THREE.Scene();
-        // Fondo negro mientras la cámara no está lista, pero luego se reemplaza con video
-        scene.background = new THREE.Color(0x000000);
-
+        scene.background = new THREE.Color(0x111122); // Fallback mientras carga cámara
+        
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.6, 0); // Altura de ojos
-
+        
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limitar para rendimiento
         document.body.appendChild(renderer.domElement);
 
-        // --- Elementos del juego ---
-        let playerPosition = { lat: 0, lon: 0 }; // Posición real del jugador (GPS)
-        let marcianos = [];
-        let lives = 3;
-        let score = 0;
-        let gameActive = true;
-        let lastShot = 0;
-        const shotCooldown = 300; // ms
+        // --- Variables globales del juego ---
+        const gameState = {
+            active: true,
+            lives: 3,
+            score: 0,
+            playerLat: null,
+            playerLon: null,
+            originLat: null,
+            originLon: null,
+            enemies: [],
+            lastShot: 0,
+            shotCooldown: 300, // ms
+            enemySpawnRadius: 30, // metros
+            enemyCount: 12,
+            powerMode: false,
+            powerTimer: null
+        };
 
-        // UI elements
+        // Referencias UI
         const livesSpan = document.getElementById('lives');
         const pointsSpan = document.getElementById('points');
         const gameoverDiv = document.getElementById('gameover');
         const restartBtn = document.getElementById('restart');
         const statusDiv = document.getElementById('status');
         const shootBtn = document.getElementById('shoot-btn');
-        const enemyCountSpan = document.getElementById('enemy-count-value');
+        const orientationOverlay = document.getElementById('orientation-overlay');
+        const requestOrientationBtn = document.getElementById('request-orientation');
 
         // --- Configuración de la cámara real como textura de fondo ---
-        let videoElement = document.createElement('video');
-        videoElement.autoplay = true;
-        videoElement.playsInline = true;
-        videoElement.style.display = 'none';
-        document.body.appendChild(videoElement);
-
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { exact: "environment" } },
-                audio: false
-            }).then(function(stream) {
-                videoElement.srcObject = stream;
-                videoElement.play();
-                statusDiv.innerHTML = 'Cámara OK';
+        let videoTexture = null;
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: "environment" } }, 
+                    audio: false 
+                });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.style.display = 'none';
+                document.body.appendChild(video);
                 
-                const videoTexture = new THREE.VideoTexture(videoElement);
+                videoTexture = new THREE.VideoTexture(video);
                 videoTexture.minFilter = THREE.LinearFilter;
                 videoTexture.magFilter = THREE.LinearFilter;
                 videoTexture.format = THREE.RGBAFormat;
                 scene.background = videoTexture;
-            }).catch(function(error) {
-                statusDiv.innerHTML = 'Error cámara (usando fondo negro): ' + error.message;
-                scene.background = new THREE.Color(0x000000);
-            });
-        } else {
-            statusDiv.innerHTML = 'API de cámara no soportada';
-            scene.background = new THREE.Color(0x000000);
+                statusDiv.innerHTML = 'Cámara lista';
+            } catch (error) {
+                statusDiv.innerHTML = 'Error cámara: ' + error.message;
+                scene.background = new THREE.Color(0x87CEEB); // Cielo azul fallback
+            }
         }
 
-        // --- Luces mejoradas ---
+        // --- Luces (mejoran la apariencia de los modelos) ---
         const ambientLight = new THREE.AmbientLight(0x404060);
         scene.add(ambientLight);
         
-        // Luz direccional desde arriba
         const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-        dirLight.position.set(0, 10, 5);
+        dirLight.position.set(1, 2, 1);
         scene.add(dirLight);
         
-        // Luz de relleno desde detrás del jugador
         const backLight = new THREE.PointLight(0x4466ff, 0.5);
-        backLight.position.set(0, 2, 5);
+        backLight.position.set(-2, 1, -2);
         scene.add(backLight);
-        
-        // Luz para destacar los marcianos (emisiva)
-        // Cada marciano tendrá su propia luz? Mejor usamos materiales emisivos.
 
-        // --- Sistema de coordenadas GPS a metros ---
-        let originLat = null;
-        let originLon = null;
-
+        // --- Funciones de utilidad GPS ---
         function latLonToMeters(lat, lon, refLat, refLon) {
             if (refLat === undefined || refLon === undefined) return { x: 0, z: 0 };
             const dx = (lon - refLon) * 111320 * Math.cos(refLat * Math.PI/180);
             const dz = (lat - refLat) * 111320;
-            return { x: dx, z: -dz }; // -z para que norte sea -z (Three.js)
+            return { x: dx, z: -dz }; // -z para que norte sea -z en Three.js
         }
 
-        // --- Función para crear un marciano con mejor apariencia ---
-        function crearMarciano(color = 0x00ff00) {
+        // --- Crear modelo de marciano mejorado ---
+        function createEnemyModel(color = 0x00ff00) {
             const group = new THREE.Group();
             
-            // Cuerpo principal (una especie de platillo)
-            const bodyGeo = new THREE.CylinderGeometry(0.6, 0.8, 0.5, 8);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color, emissive: 0x113311 });
+            // Cuerpo principal (esfera achatada)
+            const bodyGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, emissive: 0x112211, roughness: 0.4, metalness: 0.1 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.25;
-            body.rotation.x = Math.PI; // Invertir para que la base ancha esté abajo? No, mejor así.
+            body.scale.set(1, 0.7, 1);
+            body.position.y = 0.5;
             group.add(body);
             
-            // Parte superior (cúpula)
-            const domeGeo = new THREE.SphereGeometry(0.4, 16, 8);
-            const domeMat = new THREE.MeshStandardMaterial({ color: 0x88ff88, emissive: 0x224422 });
-            const dome = new THREE.Mesh(domeGeo, domeMat);
-            dome.position.y = 0.7;
-            dome.scale.set(1, 0.5, 1);
-            group.add(dome);
-            
-            // Ojos
+            // Ojos (grandes y brillantes)
             const eyeGeo = new THREE.SphereGeometry(0.15, 8);
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const pupilGeo = new THREE.SphereGeometry(0.08, 6);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 });
+            const pupilGeo = new THREE.SphereGeometry(0.07, 6);
             const pupilMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
             
             const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.2, 0.6, 0.35);
+            eyeL.position.set(-0.2, 0.7, 0.45);
             group.add(eyeL);
             const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilL.position.set(-0.2, 0.6, 0.5);
+            pupilL.position.set(-0.2, 0.7, 0.6);
             group.add(pupilL);
             
             const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(0.2, 0.6, 0.35);
+            eyeR.position.set(0.2, 0.7, 0.45);
             group.add(eyeR);
             const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilR.position.set(0.2, 0.6, 0.5);
+            pupilR.position.set(0.2, 0.7, 0.6);
             group.add(pupilR);
             
-            // Antena
-            const antennaGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.6);
-            const antennaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+            // Antena con luz
+            const antennaGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
+            const antennaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0x442200 });
             const antenna = new THREE.Mesh(antennaGeo, antennaMat);
-            antenna.position.set(0, 1.1, 0);
+            antenna.position.set(0, 1.0, 0);
             group.add(antenna);
-            const antenaBola = new THREE.SphereGeometry(0.1);
-            const bolaMat = new THREE.MeshStandardMaterial({ color: 0xff5500, emissive: 0x331100 });
-            const bola = new THREE.Mesh(antenaBola, bolaMat);
-            bola.position.set(0, 1.4, 0);
-            group.add(bola);
             
-            // Añadir un resplandor tenue (point light) alrededor del marciano
-            const light = new THREE.PointLight(color, 0.5, 5);
-            light.position.set(0, 0.5, 0);
-            group.add(light);
+            const antenaBolaGeo = new THREE.SphereGeometry(0.1, 6);
+            const antenaBolaMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0x330000 });
+            const antenaBola = new THREE.Mesh(antenaBolaGeo, antenaBolaMat);
+            antenaBola.position.set(0, 1.25, 0);
+            group.add(antenaBola);
+            
+            // Base (como un platillo)
+            const baseGeo = new THREE.TorusGeometry(0.4, 0.1, 8, 20);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.rotation.x = Math.PI/2;
+            base.position.y = 0.1;
+            group.add(base);
             
             return group;
         }
 
-        // --- Generar marcianos alrededor del punto de origen ---
-        function generarMarcianos(centerLat, centerLon, cantidad = 8) {
-            for (let i = 0; i < cantidad; i++) {
-                // Posición aleatoria en un radio de 15 a 40 metros
+        // --- Generar enemigos alrededor del origen ---
+        function spawnEnemies(centerLat, centerLon, count) {
+            for (let i = 0; i < count; i++) {
+                // Posición aleatoria en un círculo
                 const angle = Math.random() * Math.PI * 2;
-                const dist = 15 + Math.random() * 25;
-                const offsetX = Math.cos(angle) * dist;
-                const offsetZ = Math.sin(angle) * dist;
+                const dist = 15 + Math.random() * 30; // entre 15 y 45 metros
+                const dx = Math.cos(angle) * dist;
+                const dz = Math.sin(angle) * dist;
                 
-                const latOffset = offsetZ / 111320;
-                const lonOffset = offsetX / (111320 * Math.cos(centerLat * Math.PI/180));
+                const latOffset = dz / 111320;
+                const lonOffset = dx / (111320 * Math.cos(centerLat * Math.PI/180));
                 
-                const marcianoLat = centerLat + latOffset;
-                const marcianoLon = centerLon + lonOffset;
+                const enemyLat = centerLat + latOffset;
+                const enemyLon = centerLon + lonOffset;
                 
-                // Crear modelo
-                const marcianoMesh = crearMarciano(0x44ff44); // Verde más brillante
+                const model = createEnemyModel(0x44ff44); // Verde brillante
                 
-                // Posicionar en el mundo (coordenadas absolutas)
-                // La posición en la escena se calculará cada frame relativa al jugador
-                // Por ahora lo dejamos en (0,0,0) y luego lo moveremos
-                scene.add(marcianoMesh);
+                // Posición inicial en metros relativos al origen
+                const pos = latLonToMeters(enemyLat, enemyLon, centerLat, centerLon);
+                model.position.set(pos.x, 0.5, pos.z);
                 
-                marcianos.push({
-                    mesh: marcianoMesh,
-                    lat: marcianoLat,
-                    lon: marcianoLon,
-                    speed: 0.3 + Math.random() * 0.4,
-                    angle: Math.random() * Math.PI * 2,
-                    lastUpdate: performance.now()
+                scene.add(model);
+                
+                gameState.enemies.push({
+                    mesh: model,
+                    lat: enemyLat,
+                    lon: enemyLon,
+                    speed: 0.5 + Math.random() * 0.7,
+                    health: 1,
+                    floatOffset: Math.random() * Math.PI * 2
                 });
             }
-            actualizarContadorEnemigos();
-        }
-
-        // --- Actualizar contador de enemigos en UI ---
-        function actualizarContadorEnemigos() {
-            enemyCountSpan.textContent = marcianos.length;
+            statusDiv.innerHTML = `Enemigos: ${gameState.enemies.length}`;
         }
 
         // --- Iniciar GPS ---
-        function startGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    (pos) => {
-                        const { latitude, longitude } = pos.coords;
-                        if (originLat === null) {
-                            originLat = latitude;
-                            originLon = longitude;
-                            statusDiv.innerHTML = 'GPS fijado';
-                            generarMarcianos(originLat, originLon, 15); // Generamos 15 marcianos
-                        }
-                        playerPosition.lat = latitude;
-                        playerPosition.lon = longitude;
-                    },
-                    (error) => {
-                        statusDiv.innerHTML = 'Error GPS: ' + error.message;
-                    },
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-                );
-            } else {
+        function initGPS() {
+            if (!navigator.geolocation) {
                 statusDiv.innerHTML = 'GPS no soportado';
+                return;
             }
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    if (gameState.originLat === null) {
+                        gameState.originLat = latitude;
+                        gameState.originLon = longitude;
+                        statusDiv.innerHTML = 'GPS fijado, generando enemigos...';
+                        spawnEnemies(gameState.originLat, gameState.originLon, gameState.enemyCount);
+                    }
+                    gameState.playerLat = latitude;
+                    gameState.playerLon = longitude;
+                },
+                (err) => {
+                    statusDiv.innerHTML = 'Error GPS: ' + err.message;
+                },
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            );
         }
 
-        // --- Orientación del dispositivo (para apuntar) ---
-        function requestOrientation() {
+        // --- Orientación del dispositivo ---
+        function handleOrientation(event) {
+            if (!gameState.active) return;
+            // Convertir a radianes y aplicar a la cámara
+            const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0;
+            const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;
+            const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0;
+            
+            // Usamos la convención YXZ (como en la mayoría de dispositivos)
+            const euler = new THREE.Euler(beta, alpha, -gamma, 'YXZ');
+            camera.quaternion.setFromEuler(euler);
+            
+            // Ajuste para que el horizonte sea horizontal
+            camera.rotateX(Math.PI / 2);
+        }
+
+        function requestOrientationPermission() {
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // iOS
                 DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
+                    .then(permission => {
+                        if (permission === 'granted') {
                             window.addEventListener('deviceorientation', handleOrientation);
-                            document.getElementById('orientation-prompt').style.display = 'none';
+                            orientationOverlay.style.display = 'none';
                         }
                     })
                     .catch(console.error);
             } else {
-                // Android
                 window.addEventListener('deviceorientation', handleOrientation);
-                document.getElementById('orientation-prompt').style.display = 'none';
+                orientationOverlay.style.display = 'none';
             }
         }
 
-        // Manejador de orientación mejorado
-        function handleOrientation(event) {
-            if (!gameActive) return;
-            
-            // Usamos alpha, beta, gamma para rotar la cámara
-            // alpha: rotación alrededor del eje Z (0-360), beta: alrededor del X (-180 a 180), gamma: alrededor del Y (-90 a 90)
-            // En Three.js, queremos que la cámara mire hacia la dirección del dispositivo.
-            // La convención: con el dispositivo en vertical, beta es inclinación hacia adelante/atrás, gamma es inclinación lateral.
-            // Aquí una aproximación: usar alpha para el rumbo (heading), beta para la elevación.
-            
-            // Ignoramos gamma por simplicidad, pero se podría usar para roll.
-            
-            const alpha = event.alpha ? THREE.MathUtils.degToRad(event.alpha) : 0; // rotación alrededor del eje vertical
-            const beta = event.beta ? THREE.MathUtils.degToRad(event.beta) : 0;   // inclinación hacia adelante/atrás (positivo hacia atrás)
-            const gamma = event.gamma ? THREE.MathUtils.degToRad(event.gamma) : 0; // inclinación lateral
-            
-            // Convertimos a un sistema donde la cámara mire hacia -Z inicialmente y luego aplicamos rotaciones
-            // Primero, rotamos alrededor de Y (alpha) para el rumbo
-            // Luego rotamos alrededor de X (beta) para la elevación (con cuidado de que beta=0 es horizontal)
-            // Ajustamos para que beta=0 mire al horizonte, beta positivo mire hacia arriba? Depende del dispositivo.
-            
-            // En muchos dispositivos, beta es 0 cuando el dispositivo está vertical con la pantalla hacia ti.
-            // Para apuntar como una cámara, queremos que cuando el dispositivo esté apuntando al horizonte, beta sea 0.
-            // Con el dispositivo en posición de cámara (apuntando hacia adelante), beta suele ser alrededor de 90? Depende.
-            // Es complicado. Vamos a usar una implementación más simple: usar solo alpha para el rumbo y asumir que el jugador apunta con el móvil de forma natural.
-            // Para un juego donde se apunta, lo mejor es usar la orientación relativa al dispositivo.
-            
-            // Aquí usaremos un enfoque: establecer la rotación de la cámara a partir de un quaternion basado en los ángulos.
-            // Podemos usar la fórmula de la brújula: 
-            // https://developers.google.com/web/fundamentals/native-hardware/device-orientation
-            
-            // Por simplicidad, usaremos alpha para el rumbo y beta para la elevación, y asumimos que gamma es despreciable.
-            // Rotamos la cámara: primero miramos hacia -Z, luego aplicamos rotación en Y (alpha), luego en X (beta-90?) 
-            // Ajustamos para que cuando el dispositivo esté horizontal (apuntando al horizonte), beta=0 y la cámara mire al frente.
-            
-            // Vamos a probar: Queremos que cuando el dispositivo apunte al horizonte, la cámara mire hacia -Z.
-            // Cuando el dispositivo se incline hacia arriba, la cámara debe mirar hacia arriba.
-            // Asumimos que beta = 0 cuando el dispositivo está vertical (apuntando al cielo) y beta = 90 cuando está horizontal.
-            // Eso es común en muchos dispositivos. Entonces necesitamos convertir: elevation = beta - 90 (en grados).
-            
-            const elevation = beta - Math.PI/2; // beta en radianes, restamos 90 grados
-            
-            // Rumbo: alpha es el ángulo respecto al norte, pero queremos que 0 sea norte. En Three.js, -Z es norte, así que usamos alpha directamente.
-            
-            camera.quaternion.setFromEuler(new THREE.Euler(elevation, alpha, 0, 'YXZ'));
-        }
-
-        // Mostrar prompt en iOS
+        // Mostrar overlay si es necesario
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            document.getElementById('orientation-prompt').style.display = 'block';
-            document.getElementById('request-orientation').addEventListener('click', requestOrientation);
+            orientationOverlay.style.display = 'flex';
         } else {
-            // En Android, solicitamos directamente
             window.addEventListener('deviceorientation', handleOrientation);
         }
 
-        // --- Disparo (mejorado) ---
+        requestOrientationBtn.addEventListener('click', requestOrientationPermission);
+
+        // --- Disparo ---
         function shoot() {
-            if (!gameActive) return;
-            
+            if (!gameState.active) return;
             const now = Date.now();
-            if (now - lastShot < shotCooldown) return;
-            lastShot = now;
-            
+            if (now - gameState.lastShot < gameState.shotCooldown) return;
+            gameState.lastShot = now;
+
             // Efecto visual
-            shootBtn.style.transform = 'scale(0.9)';
+            shootBtn.style.transform = 'scale(0.8)';
             setTimeout(() => shootBtn.style.transform = '', 100);
-            
-            // Crear rayo desde la cámara
+
+            // Rayo desde la cámara
             const raycaster = new THREE.Raycaster();
             raycaster.ray.origin.copy(camera.position);
             raycaster.ray.direction.set(0, 0, -1).applyQuaternion(camera.quaternion);
+
+            // Buscar el enemigo más cercano en la dirección del rayo
+            let closestHit = null;
+            let closestDist = Infinity;
             
-            // Buscar el marciano más cercano en la dirección del rayo
-            let hit = null;
-            let minDist = Infinity;
-            
-            marcianos.forEach(marciano => {
-                // Usamos el bounding sphere del mesh (aproximado)
-                const sphere = new THREE.Sphere(marciano.mesh.position.clone(), 1.0); // radio 1 metro
-                const intersectionPoint = new THREE.Vector3();
-                if (raycaster.ray.intersectSphere(sphere, intersectionPoint)) {
-                    const dist = camera.position.distanceTo(intersectionPoint);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        hit = marciano;
+            gameState.enemies.forEach(enemy => {
+                const enemyPos = enemy.mesh.position.clone();
+                // Calcular distancia al rayo
+                const distToRay = raycaster.ray.distanceToPoint(enemyPos);
+                if (distToRay < 1.2) { // Tamaño de colisión
+                    const distAlongRay = raycaster.ray.origin.distanceTo(enemyPos);
+                    if (distAlongRay < closestDist) {
+                        closestDist = distAlongRay;
+                        closestHit = enemy;
                     }
                 }
             });
-            
-            if (hit) {
-                // Eliminar marciano
-                scene.remove(hit.mesh);
-                marcianos = marcianos.filter(m => m !== hit);
-                score += 100;
-                pointsSpan.textContent = score;
-                
+
+            if (closestHit) {
+                // Eliminar enemigo
+                scene.remove(closestHit.mesh);
+                gameState.enemies = gameState.enemies.filter(e => e !== closestHit);
+                gameState.score += 100;
+                pointsSpan.textContent = gameState.score;
                 statusDiv.innerHTML = '¡Impacto!';
-                setTimeout(() => statusDiv.innerHTML = 'Jugando...', 200);
-                
-                // Generar un nuevo marciano en otro lugar para mantener la población
-                if (originLat) {
-                    generarMarcianos(originLat, originLon, 1);
+
+                // Reponer un enemigo si aún estamos jugando
+                if (gameState.active && gameState.originLat) {
+                    spawnEnemies(gameState.originLat, gameState.originLon, 1);
                 }
             } else {
                 statusDiv.innerHTML = 'Fallaste';
                 setTimeout(() => statusDiv.innerHTML = 'Jugando...', 200);
             }
-            actualizarContadorEnemigos();
         }
 
         shootBtn.addEventListener('click', shoot);
         shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
 
-        // --- Movimiento de marcianos (mejorado) ---
-        function updateMarcianos() {
-            if (!gameActive || originLat === null || !playerPosition.lat) return;
-            
-            const now = performance.now();
-            const playerMeters = latLonToMeters(playerPosition.lat, playerPosition.lon, originLat, originLon);
-            
-            marcianos.forEach(marciano => {
-                // Convertir lat/lon a metros
-                const marcianoMeters = latLonToMeters(marciano.lat, marciano.lon, originLat, originLon);
+        // --- Actualizar enemigos (movimiento hacia el jugador) ---
+        function updateEnemies() {
+            if (!gameState.active || !gameState.playerLat || !gameState.originLat) return;
+
+            const playerMeters = latLonToMeters(gameState.playerLat, gameState.playerLon, gameState.originLat, gameState.originLon);
+
+            gameState.enemies.forEach(enemy => {
+                // Convertir lat/lon del enemigo a metros relativos al origen
+                const enemyMeters = latLonToMeters(enemy.lat, enemy.lon, gameState.originLat, gameState.originLon);
                 
-                // Vector hacia el jugador en metros
-                const dx = playerMeters.x - marcianoMeters.x;
-                const dz = playerMeters.z - marcianoMeters.z;
+                // Vector hacia el jugador (en metros)
+                const dx = playerMeters.x - enemyMeters.x;
+                const dz = playerMeters.z - enemyMeters.z;
                 const dist = Math.sqrt(dx*dx + dz*dz);
                 
-                // Movimiento: si está lejos, se acerca; si está cerca, puede orbitar o simplemente acercarse
                 if (dist > 2) {
-                    // Movimiento suave hacia el jugador
-                    const speed = marciano.speed * 0.05; // factor por frame
-                    const moveX = (dx / dist) * speed;
-                    const moveZ = (dz / dist) * speed;
+                    // Moverse hacia el jugador con algo de inercia
+                    const moveX = (dx / dist) * enemy.speed * 0.05;
+                    const moveZ = (dz / dist) * enemy.speed * 0.05;
                     
-                    // Actualizar lat/lon (aproximado)
+                    // Actualizar lat/lon
                     const deltaLat = -moveZ / 111320;
-                    const deltaLon = moveX / (111320 * Math.cos(originLat * Math.PI/180));
+                    const deltaLon = moveX / (111320 * Math.cos(gameState.originLat * Math.PI/180));
                     
-                    marciano.lat += deltaLat;
-                    marciano.lon += deltaLon;
-                } else {
-                    // Muy cerca: podría atacar (ya lo manejamos en colisiones)
+                    enemy.lat += deltaLat;
+                    enemy.lon += deltaLon;
                 }
                 
-                // Pequeña flotación para dar vida
-                const time = now * 0.002;
-                marciano.mesh.position.y = Math.sin(time + marciano.lat) * 0.2;
+                // Actualizar posición del mesh en la escena (relativa al jugador)
+                const newEnemyMeters = latLonToMeters(enemy.lat, enemy.lon, gameState.originLat, gameState.originLon);
+                enemy.mesh.position.set(newEnemyMeters.x - playerMeters.x, 0.5, newEnemyMeters.z - playerMeters.z);
                 
-                // Rotar para que mire al jugador
-                const dirToPlayer = new THREE.Vector3(-dx, 0, -dz).normalize(); // dirección desde marciano a jugador
-                if (dist > 0.1) {
-                    marciano.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dirToPlayer);
-                }
+                // Rotar para mirar al jugador
+                enemy.mesh.lookAt(0, 0.5, 0);
+                
+                // Animación de flotación
+                enemy.floatOffset += 0.05;
+                enemy.mesh.position.y = 0.5 + Math.sin(enemy.floatOffset) * 0.2;
             });
         }
 
-        // --- Detectar si un marciano alcanza al jugador ---
-        function checkMarcianoCollisions() {
-            if (!gameActive) return;
-            
-            const umbral = 2.0; // metros
-            const playerMeters = { x: 0, z: 0 }; // El jugador está en origen en coordenadas relativas
-            
-            marcianos.forEach(marciano => {
-                // La posición del mesh ya es relativa al jugador
-                const pos = marciano.mesh.position;
-                const dist = Math.sqrt(pos.x*pos.x + pos.z*pos.z);
-                if (dist < umbral) {
-                    // Marciano te ataca
-                    lives--;
-                    livesSpan.textContent = lives;
+        // --- Detectar colisiones (enemigo toca al jugador) ---
+        function checkCollisions() {
+            if (!gameState.active) return;
+
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i];
+                const dist = enemy.mesh.position.length(); // Distancia al origen (jugador)
+                
+                if (dist < 1.8) {
+                    // Colisión
+                    scene.remove(enemy.mesh);
+                    gameState.enemies.splice(i, 1);
+                    gameState.lives--;
+                    livesSpan.textContent = gameState.lives;
                     
-                    // Eliminar ese marciano
-                    scene.remove(marciano.mesh);
-                    marcianos = marcianos.filter(m => m !== marciano);
-                    
-                    if (lives <= 0) {
-                        gameActive = false;
+                    if (gameState.lives <= 0) {
+                        gameState.active = false;
                         gameoverDiv.style.display = 'block';
                         restartBtn.style.display = 'block';
                     } else {
-                        // Generar uno nuevo
-                        if (originLat) generarMarcianos(originLat, originLon, 1);
+                        // Generar un nuevo enemigo
+                        if (gameState.originLat) {
+                            spawnEnemies(gameState.originLat, gameState.originLon, 1);
+                        }
                     }
                 }
-            });
-            actualizarContadorEnemigos();
+            }
         }
 
-        // --- Reiniciar ---
+        // --- Reiniciar juego ---
         function restartGame() {
-            lives = 3;
-            score = 0;
-            gameActive = true;
-            
-            livesSpan.textContent = lives;
-            pointsSpan.textContent = score;
+            gameState.active = true;
+            gameState.lives = 3;
+            gameState.score = 0;
+            gameState.lastShot = 0;
+            livesSpan.textContent = gameState.lives;
+            pointsSpan.textContent = gameState.score;
             gameoverDiv.style.display = 'none';
             restartBtn.style.display = 'none';
             
-            // Limpiar marcianos
-            marcianos.forEach(m => scene.remove(m.mesh));
-            marcianos = [];
+            // Eliminar todos los enemigos
+            gameState.enemies.forEach(e => scene.remove(e.mesh));
+            gameState.enemies = [];
             
-            // Regenerar
-            if (originLat) {
-                generarMarcianos(originLat, originLon, 15);
+            // Regenerar si tenemos origen
+            if (gameState.originLat) {
+                spawnEnemies(gameState.originLat, gameState.originLon, gameState.enemyCount);
             }
         }
 
         restartBtn.addEventListener('click', restartGame);
 
-        // --- Animación principal ---
+        // --- Bucle de animación ---
         function animate() {
             requestAnimationFrame(animate);
             
-            if (originLat !== null && playerPosition.lat) {
-                // Calcular offset del jugador
-                const playerMeters = latLonToMeters(playerPosition.lat, playerPosition.lon, originLat, originLon);
-                
-                // Actualizar posiciones de marcianos (relativas al jugador)
-                marcianos.forEach(marciano => {
-                    const marcianoMeters = latLonToMeters(marciano.lat, marciano.lon, originLat, originLon);
-                    marciano.mesh.position.set(
-                        marcianoMeters.x - playerMeters.x,
-                        marciano.mesh.position.y, // la y se ajusta en updateMarcianos
-                        marcianoMeters.z - playerMeters.z
-                    );
-                });
-                
-                // Mover marcianos (actualiza lat/lon y animación)
-                updateMarcianos();
-                
-                // Detectar colisiones
-                checkMarcianoCollisions();
+            if (gameState.active) {
+                updateEnemies();
+                checkCollisions();
             }
             
             renderer.render(scene, camera);
         }
-        
-        animate();
 
-        // --- Ajustar tamaño de ventana ---
+        // --- Inicialización ---
+        async function init() {
+            await initCamera();
+            initGPS();
+            animate();
+        }
+
+        init();
+
+        // --- Ajuste de tamaño de ventana ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        // Iniciar GPS
-        startGPS();
-
-        console.log('Space Invaders: Edición Callejera (mejorado) iniciado');
     </script>
 </body>
 </html>
