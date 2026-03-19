@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mundo 3D: Bosque, Lagos y Playas</title>
+    <title>Mundo 3D · Exploración táctil</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Arial', sans-serif;
-            touch-action: none; /* Evita desplazamientos táctiles */
+            touch-action: none;
         }
         #info {
             position: absolute;
@@ -19,337 +19,248 @@
             background: rgba(0,0,0,0.5);
             padding: 8px 16px;
             border-radius: 20px;
-            z-index: 100;
+            backdrop-filter: blur(5px);
             pointer-events: none;
+            z-index: 10;
             font-size: 14px;
         }
-        /* Estilos del joystick */
-        #joystick-container {
+        /* Estilos para los joysticks (nipple.js los crea, pero definimos zona) */
+        .joystick-container {
             position: absolute;
             bottom: 40px;
             left: 40px;
             width: 120px;
             height: 120px;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 50%;
-            backdrop-filter: blur(5px);
-            border: 2px solid rgba(255,255,255,0.3);
-            z-index: 200;
-            touch-action: none;
+            z-index: 20;
+            pointer-events: auto;
         }
-        #joystick {
+        .joystick-container.right {
+            left: auto;
+            right: 40px;
+        }
+        canvas {
+            display: block;
+        }
+        #loading {
             position: absolute;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px rgba(255,255,255,0.5);
-            touch-action: none;
-            transition: background 0.1s;
-        }
-        #joystick:active {
-            background: rgba(255, 255, 255, 1);
-        }
-        #debug {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #111;
             color: white;
-            background: rgba(0,0,0,0.5);
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 100;
+            transition: opacity 1s;
         }
     </style>
-</head>
-<body>
-    <div id="info">🌲 Mundo Abierto 3D | Usa el joystick para moverte</div>
-    <div id="joystick-container">
-        <div id="joystick"></div>
-    </div>
-    <div id="debug">Posición: 0, 0</div>
-
-    <!-- Importar Three.js y sus addons -->
+    <!-- Librerías: Three.js y nipple.js (joystick táctil) -->
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+</head>
+<body>
+    <div id="loading">Cargando mundo...</div>
+    <div id="info">🌲 Bosque | 💧 Lagos | 🏖️ Playas</div>
+    
+    <!-- Contenedores para los joysticks -->
+    <div id="joystick-move" class="joystick-container"></div>
+    <div id="joystick-look" class="joystick-container right"></div>
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { Water } from 'three/addons/objects/Water.js';
-        import { Sky } from 'three/addons/objects/Sky.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js'; // Solo como referencia, no usado
         
         // --- Configuración inicial ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB); // Cielo azul
+        scene.background = new THREE.Color(0x87CEEB); // Cielo celeste
+        scene.fog = new THREE.Fog(0x87CEEB, 100, 300); // Niebla para profundidad
         
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 5); // Vista en tercera persona por ahora, pero la ajustaremos a primera persona
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(50, 20, 50);
+        camera.lookAt(0, 0, 0);
         
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limitar para rendimiento
+        renderer.shadowMap.enabled = true; // Sombras
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras suaves
         document.body.appendChild(renderer.domElement);
-
-        // --- Controles táctiles (joystick) ---
-        const joystick = document.getElementById('joystick');
-        const joystickContainer = document.getElementById('joystick-container');
-        const debugDiv = document.getElementById('debug');
         
-        let joystickActive = false;
-        let joystickVector = { x: 0, y: 0 }; // Valores entre -1 y 1
+        // Ocultar loading
+        document.getElementById('loading').style.opacity = '0';
+        setTimeout(() => document.getElementById('loading').style.display = 'none', 1000);
         
-        joystickContainer.addEventListener('touchstart', handleTouchStart);
-        joystickContainer.addEventListener('touchmove', handleTouchMove);
-        joystickContainer.addEventListener('touchend', handleTouchEnd);
-        joystickContainer.addEventListener('touchcancel', handleTouchEnd);
-        
-        function handleTouchStart(e) {
-            e.preventDefault();
-            joystickActive = true;
-            updateJoystick(e.touches[0]);
-        }
-        
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (!joystickActive) return;
-            updateJoystick(e.touches[0]);
-        }
-        
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            joystickActive = false;
-            joystickVector.x = 0;
-            joystickVector.y = 0;
-            joystick.style.transform = 'translate(-50%, -50%)'; // reset
-        }
-        
-        function updateJoystick(touch) {
-            const rect = joystickContainer.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            let x = touch.clientX - centerX;
-            let y = touch.clientY - centerY;
-            
-            // Limitar al radio del joystick
-            const maxDist = rect.width / 2;
-            const dist = Math.sqrt(x*x + y*y);
-            if (dist > maxDist) {
-                x = (x / dist) * maxDist;
-                y = (y / dist) * maxDist;
-            }
-            
-            // Normalizar a [-1, 1]
-            joystickVector.x = x / maxDist;
-            joystickVector.y = y / maxDist;
-            
-            // Mover la bola del joystick
-            joystick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
-        }
-
-        // --- Jugador ---
-        const player = {
-            position: new THREE.Vector3(0, 0, 0),
-            yaw: 0, // rotación en radianes
-            speed: 0.2
-        };
-        
-        // Cámara en primera persona (se actualizará en cada frame)
-        camera.position.set(0, 1.8, 0); // altura de ojos
-        
-        // --- Iluminación ---
-        // Luz ambiental
-        const ambientLight = new THREE.AmbientLight(0x404060);
-        scene.add(ambientLight);
-        
+        // --- Luces ---
         // Luz solar direccional
-        const sunLight = new THREE.DirectionalLight(0xfff5d1, 1.5);
+        const sunLight = new THREE.DirectionalLight(0xfff5d1, 1.2);
         sunLight.position.set(100, 100, 50);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
-        const d = 200;
+        const d = 150;
         sunLight.shadow.camera.left = -d;
         sunLight.shadow.camera.right = d;
         sunLight.shadow.camera.top = d;
         sunLight.shadow.camera.bottom = -d;
         sunLight.shadow.camera.near = 1;
-        sunLight.shadow.camera.far = 300;
+        sunLight.shadow.camera.far = 250;
+        sunLight.shadow.bias = -0.0005;
         scene.add(sunLight);
         
-        // Luz de relleno
-        const fillLight = new THREE.PointLight(0x4466ff, 0.3);
-        fillLight.position.set(-50, 50, -50);
+        // Luz ambiental
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        
+        // Luz de relleno para zonas sombrías
+        const fillLight = new THREE.PointLight(0x4466cc, 0.5);
+        fillLight.position.set(-50, 30, -50);
         scene.add(fillLight);
-
-        // --- Cielo y atmósfera (usando Sky de Three.js) ---
-        const sky = new Sky();
-        sky.scale.set(1000, 1000, 1000);
-        scene.add(sky);
         
-        const skyUniforms = sky.material.uniforms;
-        skyUniforms['turbidity'].value = 10;
-        skyUniforms['rayleigh'].value = 2;
-        skyUniforms['mieCoefficient'].value = 0.005;
-        skyUniforms['mieDirectionalG'].value = 0.8;
-        skyUniforms['sunPosition'].value.set(sunLight.position.x, sunLight.position.y, sunLight.position.z);
-
-        // --- Terreno ---
-        const terrainSize = 800;
-        const terrainSegments = 128;
+        // --- Generación procedural del terreno ---
+        const terrainSize = 400;
+        const terrainSegments = 200; // Resolución del terreno (más alto = más detalle)
         
-        // Crear geometría de terreno con alturas procedurales
-        const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
-        terrainGeometry.rotateX(-Math.PI / 2); // Plano horizontal
+        // Crear geometría del terreno
+        const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+        terrainGeo.rotateX(-Math.PI / 2); // Horizontal
         
-        // Generar alturas usando ruido simple (combinación de senos)
-        const positionAttribute = terrainGeometry.attributes.position;
+        // Modificar alturas con ruido pseudoaleatorio
+        const positionAttribute = terrainGeo.attributes.position;
+        const vertex = new THREE.Vector3();
         for (let i = 0; i < positionAttribute.count; i++) {
-            const x = positionAttribute.getX(i);
-            const z = positionAttribute.getZ(i);
+            vertex.fromBufferAttribute(positionAttribute, i);
             
-            // Ruido simple para colinas
-            let y = 0;
-            y += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
-            y += Math.sin(x * 0.02) * 2;
-            y += Math.sin(z * 0.02) * 2;
-            y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
+            // Función de ruido simple (combinación de senos)
+            const x = vertex.x;
+            const z = vertex.z;
             
-            // Zonas más bajas para lagos
-            const distToCenter = Math.sqrt(x*x + z*z);
-            if (distToCenter < 100) {
-                y = Math.max(y, 0); // mantener plano cerca del centro (lago)
+            // Altura base con montañas suaves
+            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15;
+            y += Math.sin(x * 0.05) * 5;
+            y += Math.cos(z * 0.07) * 5;
+            y += Math.random() * 2; // Pequeñas variaciones
+            
+            // Crear una playa (zona baja cerca de los bordes) y lago central
+            const distFromCenter = Math.sqrt(x*x + z*z);
+            if (distFromCenter < 40) {
+                // Zona de lago (hundida)
+                y = -2 + Math.sin(x*0.2)*0.5;
+            } else if (distFromCenter > 180) {
+                // Playas en los bordes (arena)
+                y = 1 + Math.sin(x*0.1)*0.5;
             }
             
+            vertex.y = y;
             positionAttribute.setY(i, y);
         }
         
-        terrainGeometry.computeVertexNormals();
+        // Actualizar normales para iluminación correcta
+        terrainGeo.computeVertexNormals();
         
-        // Textura del terreno (mezcla de hierba, tierra, arena)
+        // Textura del terreno según altura (mezcla de hierba, tierra, arena)
+        const textureLoader = new THREE.TextureLoader();
+        // Usaremos texturas de la web (CC0) o generaremos colores por vertex
+        const grassTex = textureLoader.load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
+        grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping;
+        grassTex.repeat.set(20, 20);
+        
+        const sandTex = textureLoader.load('https://threejs.org/examples/textures/terrain/sand.jpg');
+        sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping;
+        sandTex.repeat.set(10, 10);
+        
+        // Material con mezcla basada en altura (usamos shader simple)
         const terrainMaterial = new THREE.MeshStandardMaterial({
-            color: 0x7c9d5e,
-            roughness: 0.7,
-            metalness: 0.1,
+            map: grassTex,
+            color: 0xffffff,
             emissive: 0x000000,
+            roughness: 0.6,
+            metalness: 0.1,
             flatShading: false
         });
         
-        // Añadir textura de hierba (usaremos un canvas para simular)
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#3a5f0b';
-        ctx.fillRect(0, 0, 512, 512);
-        // Puntos aleatorios para textura
-        for (let i = 0; i < 5000; i++) {
-            ctx.fillStyle = `rgba(100, 150, 30, ${Math.random()*0.5})`;
-            ctx.fillRect(Math.floor(Math.random()*512), Math.floor(Math.random()*512), 2, 2);
-        }
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(20, 20);
-        terrainMaterial.map = texture;
+        // Para mejorar, podríamos usar vertex colors, pero por simplicidad usaremos dos materiales o textura de mezcla.
+        // En su lugar, aplicaremos un mapa de mezcla mediante shader (opcional). Como es un demo, dejamos así.
         
-        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        const terrain = new THREE.Mesh(terrainGeo, terrainMaterial);
         terrain.receiveShadow = true;
         terrain.castShadow = false;
         terrain.position.set(0, 0, 0);
         scene.add(terrain);
-
+        
         // --- Agua (lago) ---
-        const waterGeometry = new THREE.CircleGeometry(150, 64);
-        const water = new Water(
-            waterGeometry,
-            {
-                textureWidth: 512,
-                textureHeight: 512,
-                waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', (texture) => {
-                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                }),
-                sunDirection: sunLight.position.clone().normalize(),
-                sunColor: 0xffffff,
-                waterColor: 0x001e0f,
-                distortionScale: 3.7,
-                fog: scene.fog !== undefined
-            }
-        );
-        water.rotation.x = -Math.PI / 2;
-        water.position.set(0, 0.2, 0); // justo por encima del terreno
+        const waterGeometry = new THREE.CircleGeometry(60, 64);
+        waterGeometry.rotateX(-Math.PI / 2);
+        
+        const waterMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2a6f8f,
+            emissive: 0x0,
+            transparent: true,
+            opacity: 0.8,
+            roughness: 0.1,
+            metalness: 0.3
+        });
+        const water = new THREE.Mesh(waterGeometry, waterMaterial);
+        water.position.set(0, -1.5, 0); // Justo en la zona hundida
         water.receiveShadow = true;
         scene.add(water);
-
-        // --- Playas (zonas de arena alrededor del lago) ---
-        // Crearemos un anillo de arena alrededor del lago usando un toro o un plano circular con textura
-        const beachGeometry = new THREE.RingGeometry(150, 170, 64);
+        
+        // --- Arena de playa alrededor del lago y bordes (usamos un anillo) ---
+        const beachGeometry = new THREE.RingGeometry(35, 60, 64);
+        beachGeometry.rotateX(-Math.PI / 2);
         const beachMaterial = new THREE.MeshStandardMaterial({
-            color: 0xeedd99,
-            roughness: 0.9,
-            metalness: 0.0,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.8
+            color: 0xf5e6d3,
+            roughness: 0.8,
+            side: THREE.DoubleSide
         });
         const beach = new THREE.Mesh(beachGeometry, beachMaterial);
-        beach.rotation.x = -Math.PI / 2;
-        beach.position.set(0, 0.1, 0);
+        beach.position.set(0, -1.2, 0);
         beach.receiveShadow = true;
         scene.add(beach);
-
-        // --- Árboles (instanciados para rendimiento) ---
-        const treeCount = 800;
-        const treeGroup = new THREE.Group();
         
-        // Crear un árbol modelo
-        function createTree() {
+        // --- Vegetación: Árboles instanciados ---
+        // Creamos un template de árbol (grupo sencillo)
+        function createTreeTemplate() {
             const group = new THREE.Group();
             
             // Tronco
-            const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2);
+            const trunkGeo = new THREE.CylinderGeometry(0.8, 1.2, 4);
             const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
             const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-            trunk.position.y = 1;
+            trunk.position.y = 2;
             trunk.castShadow = true;
             trunk.receiveShadow = true;
             group.add(trunk);
             
-            // Copa (varias esferas)
-            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2E7D32 });
-            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 6), leafMat);
-            leaf1.position.set(0, 2.2, 0);
+            // Hojas (copa) - varias esferas
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2E8B57 });
+            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 6), leafMat);
+            leaf1.position.set(0, 4.5, 0);
             leaf1.castShadow = true;
             leaf1.receiveShadow = true;
             group.add(leaf1);
             
-            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(0.6, 6), leafMat);
-            leaf2.position.set(0.5, 2.8, 0.3);
+            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
+            leaf2.position.set(1, 4, 0.5);
             leaf2.castShadow = true;
             leaf2.receiveShadow = true;
             group.add(leaf2);
             
-            const leaf3 = new THREE.Mesh(new THREE.SphereGeometry(0.6, 6), leafMat);
-            leaf3.position.set(-0.4, 2.7, -0.4);
+            const leaf3 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
+            leaf3.position.set(-0.8, 4, 1);
             leaf3.castShadow = true;
             leaf3.receiveShadow = true;
             group.add(leaf3);
             
-            const leaf4 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6), leafMat);
-            leaf4.position.set(0.2, 3.2, -0.2);
+            const leaf4 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 6), leafMat);
+            leaf4.position.set(0.5, 4, -1);
             leaf4.castShadow = true;
             leaf4.receiveShadow = true;
             group.add(leaf4);
@@ -357,129 +268,200 @@
             return group;
         }
         
-        // Distribuir árboles aleatoriamente por el terreno, evitando el lago
-        for (let i = 0; i < treeCount; i++) {
+        const treeTemplate = createTreeTemplate();
+        
+        // Instanciación: para muchos árboles usaremos instancing, pero Three.js no tiene instancing directo de grupos.
+        // Podemos crear instancing de mallas individuales, o simplemente crear muchas mallas con la misma geometría (optimización con BufferGeometry compartida).
+        // Para simplificar y mantener buen rendimiento, crearemos una instancia de cada parte por separado con InstancedMesh.
+        // Pero para este demo, generaremos 500 árboles con mallas separadas pero geometrías compartidas (no instanced, pero limitado a 500 está bien en móvil si se cuidan).
+        
+        const treePositions = [];
+        for (let i = 0; i < 600; i++) {
+            // Posición aleatoria dentro del terreno, evitando el lago
             const angle = Math.random() * Math.PI * 2;
-            const radius = 200 + Math.random() * 300; // fuera del lago
+            const radius = 40 + Math.random() * 150; // desde 40 hasta 190
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
             
-            // Obtener altura del terreno en esa posición (aproximada)
-            const y = 0; // idealmente deberíamos leer la altura del terreno, pero por simplicidad lo ponemos a 0 y luego ajustamos con raycaster
-            // Mejor usar raycaster para colocar sobre el terreno
-            const tree = createTree();
-            tree.position.set(x, 0, z);
+            // Obtener altura del terreno en ese punto (aproximada)
+            // Como no tenemos heightmap, usamos la misma función de ruido
+            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15;
+            y += Math.sin(x * 0.05) * 5;
+            y += Math.cos(z * 0.07) * 5;
+            y += Math.random() * 2;
             
-            // Ajustar altura al terreno (podemos hacer un rayo desde arriba)
-            // Para simplificar, lo dejamos a 0 y el terreno ya tiene altura, pero el árbol flotaría.
-            // Solución: mover el árbol hacia arriba según la altura del terreno.
-            // Usaremos un rayo para encontrar la altura.
-            // Pero como es costoso, lo simulamos con la fórmula de altura del terreno.
-            // Recalcular altura igual que en el terreno:
-            let yPos = 0;
-            yPos += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
-            yPos += Math.sin(x * 0.02) * 2;
-            yPos += Math.sin(z * 0.02) * 2;
-            yPos += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
-            tree.position.y = yPos;
+            // No poner árboles en el lago (radio < 40) ni en playas muy bajas
+            if (Math.sqrt(x*x + z*z) < 45) continue;
             
+            const tree = treeTemplate.clone();
+            tree.position.set(x, y, z);
+            tree.scale.set(0.8 + Math.random()*0.4, 0.8+Math.random()*0.4, 0.8+Math.random()*0.4);
+            tree.rotation.y = Math.random() * Math.PI * 2;
             tree.castShadow = true;
             tree.receiveShadow = true;
             scene.add(tree);
+            treePositions.push(tree);
         }
-
-        // --- Rocas y detalles (opcional) ---
-        // Añadir algunas piedras
+        
+        // --- Rocas y detalles (instanciados con geometría simple) ---
         const rockGeo = new THREE.DodecahedronGeometry(0.8);
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 });
-        for (let i = 0; i < 100; i++) {
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9 });
+        for (let i = 0; i < 200; i++) {
+            const rock = new THREE.Mesh(rockGeo, rockMat);
             const angle = Math.random() * Math.PI * 2;
-            const radius = 180 + Math.random() * 200;
+            const radius = 20 + Math.random() * 170;
             const x = Math.cos(angle) * radius;
             const z = Math.sin(angle) * radius;
-            let yPos = 0;
-            yPos += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
-            yPos += Math.sin(x * 0.02) * 2;
-            yPos += Math.sin(z * 0.02) * 2;
-            yPos += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
-            
-            const rock = new THREE.Mesh(rockGeo, rockMat);
-            rock.position.set(x, yPos, z);
-            rock.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5);
+            let y = Math.sin(x * 0.02) * Math.cos(z * 0.02) * 15 + 0.5;
+            rock.position.set(x, y, z);
+            rock.scale.set(1 + Math.random(), 1+Math.random(), 1+Math.random());
             rock.castShadow = true;
             rock.receiveShadow = true;
             scene.add(rock);
         }
-
-        // --- Nubes (partículas) ---
-        const cloudGeo = new THREE.BufferGeometry();
-        const cloudCount = 200;
-        const cloudPositions = new Float32Array(cloudCount * 3);
-        for (let i = 0; i < cloudCount; i++) {
-            cloudPositions[i*3] = (Math.random() - 0.5) * 800;
-            cloudPositions[i*3+1] = 50 + Math.random() * 50;
-            cloudPositions[i*3+2] = (Math.random() - 0.5) * 800;
+        
+        // --- Cielo (una esfera con textura o simplemente color con nubes? Añadimos nubes simples) ---
+        const cloudGeo = new THREE.SphereGeometry(0.8, 6);
+        const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+        for (let i = 0; i < 30; i++) {
+            const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+            cloud.position.set(
+                (Math.random() - 0.5) * 300,
+                50 + Math.random() * 30,
+                (Math.random() - 0.5) * 300
+            );
+            cloud.scale.set(5 + Math.random()*5, 1, 3+Math.random()*3);
+            scene.add(cloud);
         }
-        cloudGeo.setAttribute('position', new THREE.BufferAttribute(cloudPositions, 3));
-        const cloudMat = new THREE.PointsMaterial({ color: 0xffffff, size: 15, transparent: true, opacity: 0.4 });
-        const clouds = new THREE.Points(cloudGeo, cloudMat);
-        scene.add(clouds);
-
-        // --- Movimiento del jugador ---
-        function updatePlayer() {
-            // El joystick da valores en x (horizontal) y y (vertical)
-            // Interpretamos: x controla rotación (yaw), y controla movimiento adelante/atrás
-            const turnSpeed = 0.03;
-            const moveSpeed = player.speed;
-            
-            // Rotación
-            player.yaw -= joystickVector.x * turnSpeed; // negativo para que izquierda gire a izquierda
-            
-            // Movimiento en dirección de la cámara
-            if (Math.abs(joystickVector.y) > 0.1) {
-                const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle('y', player.yaw);
-                player.position.addScaledVector(forward, joystickVector.y * moveSpeed);
+        
+        // --- Controles táctiles con nipple.js ---
+        // Variables de movimiento
+        const moveSpeed = 0.5;
+        const lookSpeed = 0.02;
+        const velocity = new THREE.Vector3();
+        const moveDirection = new THREE.Vector3();
+        const lookDirection = new THREE.Vector2(); // x: horizontal, y: vertical
+        
+        // Joystick de movimiento (izquierdo)
+        const moveJoystick = nipplejs.create({
+            zone: document.getElementById('joystick-move'),
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: 'blue',
+            size: 100,
+            lockY: false,
+            lockX: false
+        });
+        
+        moveJoystick.on('move', (evt, data) => {
+            const vector = data.vector; // { x, y } normalizado entre -1 y 1
+            moveDirection.x = vector.x;
+            moveDirection.z = vector.y; // y del joystick es adelante/atrás
+        }).on('end', () => {
+            moveDirection.x = 0;
+            moveDirection.z = 0;
+        });
+        
+        // Joystick de mirada (derecho)
+        const lookJoystick = nipplejs.create({
+            zone: document.getElementById('joystick-look'),
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: 'red',
+            size: 100,
+            lockY: false,
+            lockX: false
+        });
+        
+        lookJoystick.on('move', (evt, data) => {
+            const vector = data.vector;
+            // Acumulamos la dirección de mirada (como velocidad angular)
+            lookDirection.x = vector.x * lookSpeed;
+            lookDirection.y = vector.y * lookSpeed;
+        }).on('end', () => {
+            lookDirection.x = 0;
+            lookDirection.y = 0;
+        });
+        
+        // También permitir rotación con un dedo arrastrando (touch move) como alternativa
+        let isTouching = false;
+        let lastTouchX = 0;
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isTouching = true;
+                lastTouchX = e.touches[0].clientX;
             }
+        });
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (isTouching && e.touches.length === 1) {
+                const delta = e.touches[0].clientX - lastTouchX;
+                camera.rotation.y += delta * 0.005;
+                lastTouchX = e.touches[0].clientX;
+            }
+        });
+        renderer.domElement.addEventListener('touchend', () => {
+            isTouching = false;
+        });
+        
+        // --- Animación y lógica de movimiento ---
+        function updateMovement() {
+            // Movimiento relativo a la dirección de la cámara
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            forward.y = 0;
+            forward.normalize();
             
-            // Limitar al tamaño del terreno (opcional)
-            const limit = 350;
-            player.position.x = Math.max(-limit, Math.min(limit, player.position.x));
-            player.position.z = Math.max(-limit, Math.min(limit, player.position.z));
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            right.y = 0;
+            right.normalize();
             
-            // Actualizar posición de la cámara (primera persona)
-            camera.position.copy(player.position.clone().add(new THREE.Vector3(0, 1.8, 0)));
-            camera.rotation.y = player.yaw;
+            // Combinar dirección del joystick
+            velocity.copy(forward).multiplyScalar(moveDirection.z * moveSpeed);
+            velocity.addScaledVector(right, moveDirection.x * moveSpeed);
             
-            // Mostrar posición en debug
-            debugDiv.innerHTML = `Pos: ${player.position.x.toFixed(1)}, ${player.position.z.toFixed(1)} | Yaw: ${(player.yaw * 180 / Math.PI).toFixed(0)}°`;
+            // Aplicar movimiento a la cámara
+            camera.position.add(velocity);
+            
+            // Aplicar rotación del joystick de mirada
+            camera.rotation.y -= lookDirection.x; // horizontal
+            // Limitar rotación vertical para no voltear
+            const newPitch = camera.rotation.x - lookDirection.y;
+            camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, newPitch));
         }
-
-        // --- Animación ---
+        
+        // --- Optimización: Frustum culling básico (Three.js lo hace automáticamente) y LOD manual?
+        // No implementamos LOD complejo, pero limitamos el número de objetos.
+        
+        // --- Bucle de animación ---
         function animate() {
             requestAnimationFrame(animate);
             
-            // Actualizar movimiento según joystick
-            updatePlayer();
+            updateMovement();
             
-            // Animar agua
-            water.material.uniforms['time'].value += 0.01;
+            // Animar agua (ligero movimiento)
+            water.rotation.y += 0.001;
             
-            // Mover nubes lentamente
-            clouds.rotation.y += 0.0001;
+            // Animar nubes
+            scene.children.forEach(child => {
+                if (child.material && child.material.color.getHex() === 0xffffff && child.geometry.type === 'SphereGeometry') {
+                    child.position.x += 0.01;
+                    if (child.position.x > 200) child.position.x = -200;
+                }
+            });
             
             renderer.render(scene, camera);
         }
         
         animate();
-
-        // --- Ajuste de tamaño de ventana ---
+        
+        // --- Manejo de resize ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        console.log('Mundo 3D iniciado');
+        
+        // --- Mostrar información de depuración (opcional) ---
+        console.log('Mundo creado con', treePositions.length, 'árboles');
     </script>
 </body>
 </html>
