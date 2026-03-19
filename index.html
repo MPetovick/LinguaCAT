@@ -3,669 +3,483 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SPACE INVADERS AR · Ejes invertidos (natural)</title>
+    <title>Mundo 3D: Bosque, Lagos y Playas</title>
     <style>
-        /* (los mismos estilos que antes, los mantengo por brevedad) */
         body {
             margin: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
-            touch-action: none;
+            font-family: 'Arial', sans-serif;
+            touch-action: none; /* Evita desplazamientos táctiles */
         }
-        #ui {
+        #info {
             position: absolute;
             top: 20px;
             left: 20px;
-            right: 20px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 10;
             color: white;
-            text-shadow: 0 0 10px rgba(0,0,0,0.7);
-            font-size: 1.5rem;
-            font-weight: bold;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            z-index: 100;
+            pointer-events: none;
+            font-size: 14px;
         }
-        #ui span {
-            background: rgba(0,0,0,0.6);
-            padding: 8px 20px;
-            border-radius: 40px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.3);
-        }
-        #crosshair {
+        /* Estilos del joystick */
+        #joystick-container {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            bottom: 40px;
+            left: 40px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 50%;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 200;
+            touch-action: none;
+        }
+        #joystick {
+            position: absolute;
             width: 60px;
             height: 60px;
-            border-radius: 50%;
-            border: 3px solid rgba(255, 50, 50, 0.9);
-            box-shadow: 0 0 30px rgba(255,0,0,0.6);
-            z-index: 20;
-            pointer-events: none;
-        }
-        #crosshair::before, #crosshair::after {
-            content: '';
-            position: absolute;
             background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 15px red;
-        }
-        #crosshair::before {
-            top: 50%;
-            left: -20px;
-            width: 100px;
-            height: 3px;
-            transform: translateY(-50%);
-        }
-        #crosshair::after {
-            left: 50%;
-            top: -20px;
-            width: 3px;
-            height: 100px;
-            transform: translateX(-50%);
-        }
-        #shoot-btn {
-            position: absolute;
-            bottom: 40px;
-            right: 30px;
-            width: 100px;
-            height: 100px;
             border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #ff5e5e, #aa0000);
-            border: 4px solid white;
-            box-shadow: 0 0 40px #ff0000, 0 10px 20px rgba(0,0,0,0.5);
-            z-index: 30;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 2rem;
-            font-weight: bold;
-            user-select: none;
-            touch-action: manipulation;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        #shoot-btn:active {
-            transform: scale(0.9);
-            box-shadow: 0 0 80px #ff9900;
-        }
-        #restart {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ffd966;
-            color: #1e1e2f;
-            border: none;
-            padding: 15px 50px;
-            font-size: 1.8rem;
-            border-radius: 60px;
-            z-index: 100;
-            display: none;
-            cursor: pointer;
-            box-shadow: 0 0 30px #ffd966;
-            border: 2px solid white;
-        }
-        #gameover {
-            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            color: white;
-            background: rgba(0,0,0,0.85);
-            padding: 40px 80px;
-            border-radius: 40px;
-            z-index: 200;
-            font-size: 4rem;
-            font-weight: bold;
-            text-align: center;
-            border: 4px solid #ff0000;
-            display: none;
-            backdrop-filter: blur(10px);
-            white-space: nowrap;
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            touch-action: none;
+            transition: background 0.1s;
         }
-        #status {
+        #joystick:active {
+            background: rgba(255, 255, 255, 1);
+        }
+        #debug {
             position: absolute;
             bottom: 20px;
-            left: 20px;
-            color: #ccc;
-            background: rgba(20,20,30,0.8);
-            padding: 6px 15px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            z-index: 15;
-            backdrop-filter: blur(4px);
-            border: 1px solid #444;
-        }
-        #orientation-prompt {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(10,10,20,0.95);
+            right: 20px;
             color: white;
-            padding: 30px 40px;
-            border-radius: 40px;
-            z-index: 1000;
-            text-align: center;
-            border: 2px solid #0ff;
-            backdrop-filter: blur(15px);
-            display: none;
-        }
-        #orientation-prompt button {
-            margin-top: 20px;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            background: #0ff;
-            border: none;
-            border-radius: 60px;
-            color: black;
-            font-weight: bold;
-            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <span>❤️ <span id="lives">3</span></span>
-        <span>👾 <span id="score">0</span></span>
+    <div id="info">🌲 Mundo Abierto 3D | Usa el joystick para moverte</div>
+    <div id="joystick-container">
+        <div id="joystick"></div>
     </div>
-    <div id="crosshair"></div>
-    <div id="shoot-btn">🔫</div>
-    <div id="gameover">GAME OVER</div>
-    <div id="restart">VOLVER A JUGAR</div>
-    <div id="status">Inicializando...</div>
-    <div id="orientation-prompt">
-        <h2>🎯 Activar giroscopio</h2>
-        <p>Necesitamos acceso a la orientación para apuntar.</p>
-        <button id="request-orientation">PERMITIR</button>
-    </div>
+    <div id="debug">Posición: 0, 0</div>
 
+    <!-- Importar Three.js y sus addons -->
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
             }
         }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
-
-        // --- Escena, cámara, render (sin fondo de cámara real, solo 3D) ---
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Water } from 'three/addons/objects/Water.js';
+        import { Sky } from 'three/addons/objects/Sky.js';
+        
+        // --- Configuración inicial ---
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050510); // Azul noche
+        scene.background = new THREE.Color(0x87CEEB); // Cielo azul
         
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.6, 0); // Altura de ojos
+        camera.position.set(0, 2, 5); // Vista en tercera persona por ahora, pero la ajustaremos a primera persona
         
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(window.devicePixelRatio);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
-        // --- Iluminación (igual que antes) ---
+        // --- Controles táctiles (joystick) ---
+        const joystick = document.getElementById('joystick');
+        const joystickContainer = document.getElementById('joystick-container');
+        const debugDiv = document.getElementById('debug');
+        
+        let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 }; // Valores entre -1 y 1
+        
+        joystickContainer.addEventListener('touchstart', handleTouchStart);
+        joystickContainer.addEventListener('touchmove', handleTouchMove);
+        joystickContainer.addEventListener('touchend', handleTouchEnd);
+        joystickContainer.addEventListener('touchcancel', handleTouchEnd);
+        
+        function handleTouchStart(e) {
+            e.preventDefault();
+            joystickActive = true;
+            updateJoystick(e.touches[0]);
+        }
+        
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!joystickActive) return;
+            updateJoystick(e.touches[0]);
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            joystickActive = false;
+            joystickVector.x = 0;
+            joystickVector.y = 0;
+            joystick.style.transform = 'translate(-50%, -50%)'; // reset
+        }
+        
+        function updateJoystick(touch) {
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let x = touch.clientX - centerX;
+            let y = touch.clientY - centerY;
+            
+            // Limitar al radio del joystick
+            const maxDist = rect.width / 2;
+            const dist = Math.sqrt(x*x + y*y);
+            if (dist > maxDist) {
+                x = (x / dist) * maxDist;
+                y = (y / dist) * maxDist;
+            }
+            
+            // Normalizar a [-1, 1]
+            joystickVector.x = x / maxDist;
+            joystickVector.y = y / maxDist;
+            
+            // Mover la bola del joystick
+            joystick.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+        }
+
+        // --- Jugador ---
+        const player = {
+            position: new THREE.Vector3(0, 0, 0),
+            yaw: 0, // rotación en radianes
+            speed: 0.2
+        };
+        
+        // Cámara en primera persona (se actualizará en cada frame)
+        camera.position.set(0, 1.8, 0); // altura de ojos
+        
+        // --- Iluminación ---
+        // Luz ambiental
         const ambientLight = new THREE.AmbientLight(0x404060);
         scene.add(ambientLight);
         
-        const sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
-        sunLight.position.set(10, 20, 5);
+        // Luz solar direccional
+        const sunLight = new THREE.DirectionalLight(0xfff5d1, 1.5);
+        sunLight.position.set(100, 100, 50);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 1024;
-        sunLight.shadow.mapSize.height = 1024;
-        const d = 30;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        const d = 200;
         sunLight.shadow.camera.left = -d;
         sunLight.shadow.camera.right = d;
         sunLight.shadow.camera.top = d;
         sunLight.shadow.camera.bottom = -d;
         sunLight.shadow.camera.near = 1;
-        sunLight.shadow.camera.far = 50;
+        sunLight.shadow.camera.far = 300;
         scene.add(sunLight);
         
-        const backLight = new THREE.PointLight(0x4466ff, 0.5);
-        backLight.position.set(-5, 5, -10);
-        scene.add(backLight);
+        // Luz de relleno
+        const fillLight = new THREE.PointLight(0x4466ff, 0.3);
+        fillLight.position.set(-50, 50, -50);
+        scene.add(fillLight);
+
+        // --- Cielo y atmósfera (usando Sky de Three.js) ---
+        const sky = new Sky();
+        sky.scale.set(1000, 1000, 1000);
+        scene.add(sky);
         
-        const accentLight = new THREE.PointLight(0xffaa00, 0.8, 30);
-        accentLight.position.set(0, 5, 5);
-        scene.add(accentLight);
+        const skyUniforms = sky.material.uniforms;
+        skyUniforms['turbidity'].value = 10;
+        skyUniforms['rayleigh'].value = 2;
+        skyUniforms['mieCoefficient'].value = 0.005;
+        skyUniforms['mieDirectionalG'].value = 0.8;
+        skyUniforms['sunPosition'].value.set(sunLight.position.x, sunLight.position.y, sunLight.position.z);
 
-        // --- Fondo estrellado ---
-        const starsGeometry = new THREE.BufferGeometry();
-        const starsCount = 2000;
-        const starsPositions = new Float32Array(starsCount * 3);
-        for (let i = 0; i < starsCount * 3; i += 3) {
-            const r = 80 + Math.random() * 50;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
-            starsPositions[i] = r * Math.sin(phi) * Math.cos(theta);
-            starsPositions[i+1] = r * Math.sin(phi) * Math.sin(theta);
-            starsPositions[i+2] = r * Math.cos(phi);
+        // --- Terreno ---
+        const terrainSize = 800;
+        const terrainSegments = 128;
+        
+        // Crear geometría de terreno con alturas procedurales
+        const terrainGeometry = new THREE.PlaneGeometry(terrainSize, terrainSize, terrainSegments, terrainSegments);
+        terrainGeometry.rotateX(-Math.PI / 2); // Plano horizontal
+        
+        // Generar alturas usando ruido simple (combinación de senos)
+        const positionAttribute = terrainGeometry.attributes.position;
+        for (let i = 0; i < positionAttribute.count; i++) {
+            const x = positionAttribute.getX(i);
+            const z = positionAttribute.getZ(i);
+            
+            // Ruido simple para colinas
+            let y = 0;
+            y += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
+            y += Math.sin(x * 0.02) * 2;
+            y += Math.sin(z * 0.02) * 2;
+            y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
+            
+            // Zonas más bajas para lagos
+            const distToCenter = Math.sqrt(x*x + z*z);
+            if (distToCenter < 100) {
+                y = Math.max(y, 0); // mantener plano cerca del centro (lago)
+            }
+            
+            positionAttribute.setY(i, y);
         }
-        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
-        const starsMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true });
-        const stars = new THREE.Points(starsGeometry, starsMaterial);
-        scene.add(stars);
+        
+        terrainGeometry.computeVertexNormals();
+        
+        // Textura del terreno (mezcla de hierba, tierra, arena)
+        const terrainMaterial = new THREE.MeshStandardMaterial({
+            color: 0x7c9d5e,
+            roughness: 0.7,
+            metalness: 0.1,
+            emissive: 0x000000,
+            flatShading: false
+        });
+        
+        // Añadir textura de hierba (usaremos un canvas para simular)
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#3a5f0b';
+        ctx.fillRect(0, 0, 512, 512);
+        // Puntos aleatorios para textura
+        for (let i = 0; i < 5000; i++) {
+            ctx.fillStyle = `rgba(100, 150, 30, ${Math.random()*0.5})`;
+            ctx.fillRect(Math.floor(Math.random()*512), Math.floor(Math.random()*512), 2, 2);
+        }
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(20, 20);
+        terrainMaterial.map = texture;
+        
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrain.receiveShadow = true;
+        terrain.castShadow = false;
+        terrain.position.set(0, 0, 0);
+        scene.add(terrain);
 
-        // --- Variables del juego ---
-        let playerPosition = { lat: 0, lon: 0 };
-        let originLat = null;
-        let originLon = null;
-        let marcianos = [];
-        let lives = 3;
-        let score = 0;
-        let gameActive = true;
-        let lastShot = 0;
-        const SHOT_COOLDOWN = 300;
+        // --- Agua (lago) ---
+        const waterGeometry = new THREE.CircleGeometry(150, 64);
+        const water = new Water(
+            waterGeometry,
+            {
+                textureWidth: 512,
+                textureHeight: 512,
+                waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', (texture) => {
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                }),
+                sunDirection: sunLight.position.clone().normalize(),
+                sunColor: 0xffffff,
+                waterColor: 0x001e0f,
+                distortionScale: 3.7,
+                fog: scene.fog !== undefined
+            }
+        );
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(0, 0.2, 0); // justo por encima del terreno
+        water.receiveShadow = true;
+        scene.add(water);
 
-        // UI
-        const livesSpan = document.getElementById('lives');
-        const scoreSpan = document.getElementById('score');
-        const gameoverDiv = document.getElementById('gameover');
-        const restartBtn = document.getElementById('restart');
-        const statusDiv = document.getElementById('status');
-        const shootBtn = document.getElementById('shoot-btn');
+        // --- Playas (zonas de arena alrededor del lago) ---
+        // Crearemos un anillo de arena alrededor del lago usando un toro o un plano circular con textura
+        const beachGeometry = new THREE.RingGeometry(150, 170, 64);
+        const beachMaterial = new THREE.MeshStandardMaterial({
+            color: 0xeedd99,
+            roughness: 0.9,
+            metalness: 0.0,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.8
+        });
+        const beach = new THREE.Mesh(beachGeometry, beachMaterial);
+        beach.rotation.x = -Math.PI / 2;
+        beach.position.set(0, 0.1, 0);
+        beach.receiveShadow = true;
+        scene.add(beach);
 
-        // --- Calibración de orientación: ángulos de referencia ---
-        let initialBeta = null;
-        let initialGamma = null;
-
-        // --- Función para crear marciano (geometría de respaldo detallada) ---
-        function createAlien() {
+        // --- Árboles (instanciados para rendimiento) ---
+        const treeCount = 800;
+        const treeGroup = new THREE.Group();
+        
+        // Crear un árbol modelo
+        function createTree() {
             const group = new THREE.Group();
             
-            // Cuerpo (cilindro)
-            const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.0, 8);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x33dd33, emissive: 0x113311, roughness: 0.3, metalness: 0.1 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.5;
-            body.castShadow = true;
-            body.receiveShadow = true;
-            group.add(body);
+            // Tronco
+            const trunkGeo = new THREE.CylinderGeometry(0.5, 0.7, 2);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B5A2B });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            trunk.receiveShadow = true;
+            group.add(trunk);
             
-            // Cabeza
-            const headGeo = new THREE.SphereGeometry(0.4, 16);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x44ee44, emissive: 0x113311 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.1;
-            head.castShadow = true;
-            head.receiveShadow = true;
-            group.add(head);
+            // Copa (varias esferas)
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2E7D32 });
+            const leaf1 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 6), leafMat);
+            leaf1.position.set(0, 2.2, 0);
+            leaf1.castShadow = true;
+            leaf1.receiveShadow = true;
+            group.add(leaf1);
             
-            // Ojos
-            const eyeGeo = new THREE.SphereGeometry(0.12, 8);
-            const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeL.position.set(-0.2, 1.2, 0.35);
-            group.add(eyeL);
-            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeR.position.set(0.2, 1.2, 0.35);
-            group.add(eyeR);
+            const leaf2 = new THREE.Mesh(new THREE.SphereGeometry(0.6, 6), leafMat);
+            leaf2.position.set(0.5, 2.8, 0.3);
+            leaf2.castShadow = true;
+            leaf2.receiveShadow = true;
+            group.add(leaf2);
             
-            // Pupilas rojas
-            const pupilGeo = new THREE.SphereGeometry(0.06, 6);
-            const pupilMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-            const pupilL = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilL.position.set(-0.2, 1.2, 0.45);
-            group.add(pupilL);
-            const pupilR = new THREE.Mesh(pupilGeo, pupilMat);
-            pupilR.position.set(0.2, 1.2, 0.45);
-            group.add(pupilR);
+            const leaf3 = new THREE.Mesh(new THREE.SphereGeometry(0.6, 6), leafMat);
+            leaf3.position.set(-0.4, 2.7, -0.4);
+            leaf3.castShadow = true;
+            leaf3.receiveShadow = true;
+            group.add(leaf3);
             
-            // Antenas
-            const antennaGeo = new THREE.ConeGeometry(0.07, 0.4, 6);
-            const antennaMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
-            const ant1 = new THREE.Mesh(antennaGeo, antennaMat);
-            ant1.position.set(-0.15, 1.5, 0);
-            ant1.rotation.z = 0.2;
-            group.add(ant1);
-            const ant2 = new THREE.Mesh(antennaGeo, antennaMat);
-            ant2.position.set(0.15, 1.5, 0);
-            ant2.rotation.z = -0.2;
-            group.add(ant2);
-            
-            // Base (aro)
-            const baseGeo = new THREE.TorusGeometry(0.4, 0.05, 6, 20);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.rotation.x = Math.PI/2;
-            base.position.y = 0.15;
-            group.add(base);
+            const leaf4 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6), leafMat);
+            leaf4.position.set(0.2, 3.2, -0.2);
+            leaf4.castShadow = true;
+            leaf4.receiveShadow = true;
+            group.add(leaf4);
             
             return group;
         }
-
-        // --- Conversión GPS a metros relativos ---
-        function latLonToMeters(lat, lon, refLat, refLon) {
-            if (refLat === undefined || refLon === undefined) return { x: 0, z: 0 };
-            const dx = (lon - refLon) * 111320 * Math.cos(refLat * Math.PI/180);
-            const dz = (lat - refLat) * 111320;
-            return { x: dx, z: -dz };
+        
+        // Distribuir árboles aleatoriamente por el terreno, evitando el lago
+        for (let i = 0; i < treeCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 200 + Math.random() * 300; // fuera del lago
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            
+            // Obtener altura del terreno en esa posición (aproximada)
+            const y = 0; // idealmente deberíamos leer la altura del terreno, pero por simplicidad lo ponemos a 0 y luego ajustamos con raycaster
+            // Mejor usar raycaster para colocar sobre el terreno
+            const tree = createTree();
+            tree.position.set(x, 0, z);
+            
+            // Ajustar altura al terreno (podemos hacer un rayo desde arriba)
+            // Para simplificar, lo dejamos a 0 y el terreno ya tiene altura, pero el árbol flotaría.
+            // Solución: mover el árbol hacia arriba según la altura del terreno.
+            // Usaremos un rayo para encontrar la altura.
+            // Pero como es costoso, lo simulamos con la fórmula de altura del terreno.
+            // Recalcular altura igual que en el terreno:
+            let yPos = 0;
+            yPos += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
+            yPos += Math.sin(x * 0.02) * 2;
+            yPos += Math.sin(z * 0.02) * 2;
+            yPos += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
+            tree.position.y = yPos;
+            
+            tree.castShadow = true;
+            tree.receiveShadow = true;
+            scene.add(tree);
         }
 
-        // --- Generar marcianos alrededor del punto de origen ---
-        function generarMarcianos(centerLat, centerLon, cantidad = 12) {
-            for (let i = 0; i < cantidad; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = 15 + Math.random() * 35; // entre 15 y 50 metros
-                const offsetX = Math.cos(angle) * dist;
-                const offsetZ = Math.sin(angle) * dist;
-                
-                const latOffset = offsetZ / 111320;
-                const lonOffset = offsetX / (111320 * Math.cos(centerLat * Math.PI/180));
-                
-                const alienLat = centerLat + latOffset;
-                const alienLon = centerLon + lonOffset;
-                
-                const mesh = createAlien();
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
-                
-                // Guardar coordenadas reales en userData
-                mesh.userData = {
-                    lat: alienLat,
-                    lon: alienLon,
-                    floatOffset: Math.random() * Math.PI * 2,
-                    floatSpeed: 0.5 + Math.random() * 0.5,
-                    rotationSpeed: 0.005 + Math.random() * 0.01,
-                    baseY: 0
-                };
-                
-                scene.add(mesh);
-                marcianos.push(mesh);
-            }
-            statusDiv.innerHTML = `${marcianos.length} invasores generados`;
+        // --- Rocas y detalles (opcional) ---
+        // Añadir algunas piedras
+        const rockGeo = new THREE.DodecahedronGeometry(0.8);
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 });
+        for (let i = 0; i < 100; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 180 + Math.random() * 200;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            let yPos = 0;
+            yPos += Math.sin(x * 0.01) * Math.cos(z * 0.01) * 5;
+            yPos += Math.sin(x * 0.02) * 2;
+            yPos += Math.sin(z * 0.02) * 2;
+            yPos += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 3;
+            
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            rock.position.set(x, yPos, z);
+            rock.scale.set(1 + Math.random()*0.5, 1 + Math.random()*0.5, 1 + Math.random()*0.5);
+            rock.castShadow = true;
+            rock.receiveShadow = true;
+            scene.add(rock);
         }
 
-        // --- Iniciar GPS (con fallback a posición fija para pruebas) ---
-        function startGPS() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    (pos) => {
-                        const { latitude, longitude } = pos.coords;
-                        if (originLat === null) {
-                            originLat = latitude;
-                            originLon = longitude;
-                            statusDiv.innerHTML = 'GPS fijado · Generando invasores...';
-                            generarMarcianos(originLat, originLon, 15);
-                        }
-                        playerPosition.lat = latitude;
-                        playerPosition.lon = longitude;
-                    },
-                    (err) => {
-                        statusDiv.innerHTML = 'Error GPS, usando posición simulada';
-                        if (originLat === null) {
-                            originLat = 40.4168; // Madrid
-                            originLon = -3.7038;
-                            generarMarcianos(originLat, originLon, 15);
-                        }
-                    },
-                    { enableHighAccuracy: true, timeout: 15000 }
-                );
-            } else {
-                statusDiv.innerHTML = 'GPS no soportado, modo simulación';
-                originLat = 40.4168;
-                originLon = -3.7038;
-                generarMarcianos(originLat, originLon, 15);
-            }
+        // --- Nubes (partículas) ---
+        const cloudGeo = new THREE.BufferGeometry();
+        const cloudCount = 200;
+        const cloudPositions = new Float32Array(cloudCount * 3);
+        for (let i = 0; i < cloudCount; i++) {
+            cloudPositions[i*3] = (Math.random() - 0.5) * 800;
+            cloudPositions[i*3+1] = 50 + Math.random() * 50;
+            cloudPositions[i*3+2] = (Math.random() - 0.5) * 800;
         }
+        cloudGeo.setAttribute('position', new THREE.BufferAttribute(cloudPositions, 3));
+        const cloudMat = new THREE.PointsMaterial({ color: 0xffffff, size: 15, transparent: true, opacity: 0.4 });
+        const clouds = new THREE.Points(cloudGeo, cloudMat);
+        scene.add(clouds);
 
-        // --- MANEJADOR DE ORIENTACIÓN CORREGIDO (ejes invertidos para control natural) ---
-        function handleOrientation(event) {
-            if (!gameActive) return;
+        // --- Movimiento del jugador ---
+        function updatePlayer() {
+            // El joystick da valores en x (horizontal) y y (vertical)
+            // Interpretamos: x controla rotación (yaw), y controla movimiento adelante/atrás
+            const turnSpeed = 0.03;
+            const moveSpeed = player.speed;
             
-            let beta = event.beta;  // Inclinación frontal (-180 a 180), 0 cuando el móvil está vertical mirando al horizonte
-            let gamma = event.gamma; // Inclinación lateral (-90 a 90), 0 cuando está nivelado
+            // Rotación
+            player.yaw -= joystickVector.x * turnSpeed; // negativo para que izquierda gire a izquierda
             
-            // En algunos dispositivos los valores pueden ser nulos
-            if (beta === null || gamma === null) return;
-            
-            // Calibrar con la primera lectura (opcional, para que el frente sea donde el usuario empieza mirando)
-            if (initialBeta === null) {
-                initialBeta = beta;
-                initialGamma = gamma;
-                statusDiv.innerHTML = 'Orientación calibrada';
+            // Movimiento en dirección de la cámara
+            if (Math.abs(joystickVector.y) > 0.1) {
+                const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle('y', player.yaw);
+                player.position.addScaledVector(forward, joystickVector.y * moveSpeed);
             }
             
-            // Convertir a radianes
-            const betaRad = THREE.MathUtils.degToRad(beta - initialBeta);
-            const gammaRad = THREE.MathUtils.degToRad(gamma - initialGamma);
+            // Limitar al tamaño del terreno (opcional)
+            const limit = 350;
+            player.position.x = Math.max(-limit, Math.min(limit, player.position.x));
+            player.position.z = Math.max(-limit, Math.min(limit, player.position.z));
             
-            // --- Ajuste de ejes para control natural ---
-            // - gamma (lateral) controla la rotación en Y (guiñada): positivo a la derecha debe mirar a la derecha.
-            // - beta (frontal) controla la rotación en X (cabeceo): positivo hacia arriba debe mirar arriba.
-            // Límites para evitar que la cámara se voltee completamente
-            const maxPitch = Math.PI / 2.2; // unos 80 grados
-            const pitch = Math.max(-maxPitch, Math.min(maxPitch, betaRad));
-            const yaw = gammaRad; // sin límite, puede girar 360 grados
+            // Actualizar posición de la cámara (primera persona)
+            camera.position.copy(player.position.clone().add(new THREE.Vector3(0, 1.8, 0)));
+            camera.rotation.y = player.yaw;
             
-            // Aplicar rotación: primero Y (guiñada), luego X (cabeceo) (orden ZXY podría funcionar, pero probamos así)
-            camera.rotation.order = 'YXZ'; // Para que el cabeceo no afecte la guiñada
-            camera.rotation.set(pitch, yaw, 0);
-            
-            // Nota: No usamos alpha (brújula) para no liar al usuario
+            // Mostrar posición en debug
+            debugDiv.innerHTML = `Pos: ${player.position.x.toFixed(1)}, ${player.position.z.toFixed(1)} | Yaw: ${(player.yaw * 180 / Math.PI).toFixed(0)}°`;
         }
 
-        // --- Solicitar permisos de orientación (iOS) ---
-        function requestOrientation() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(perm => {
-                        if (perm === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                            document.getElementById('orientation-prompt').style.display = 'none';
-                            statusDiv.innerHTML = 'Giroscopio OK';
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-                document.getElementById('orientation-prompt').style.display = 'none';
-                statusDiv.innerHTML = 'Giroscopio OK';
-            }
-        }
-
-        // Mostrar prompt si es necesario
-        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            document.getElementById('orientation-prompt').style.display = 'block';
-            document.getElementById('request-orientation').addEventListener('click', requestOrientation);
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-        }
-
-        // --- Disparo con raycasting ---
-        function shoot() {
-            if (!gameActive) return;
-            const now = Date.now();
-            if (now - lastShot < SHOT_COOLDOWN) return;
-            lastShot = now;
-            
-            shootBtn.style.transform = 'scale(0.8)';
-            setTimeout(() => shootBtn.style.transform = '', 150);
-            
-            const raycaster = new THREE.Raycaster();
-            raycaster.ray.origin.copy(camera.position);
-            raycaster.ray.direction.set(0, 0, -1).applyQuaternion(camera.quaternion);
-            
-            // Detección por esfera
-            const hit = marcianos.find(marciano => {
-                const sphere = new THREE.Sphere(marciano.position.clone(), 1.2);
-                return raycaster.ray.intersectsSphere(sphere);
-            });
-            
-            if (hit) {
-                createExplosion(hit.position.clone());
-                scene.remove(hit);
-                marcianos = marcianos.filter(m => m !== hit);
-                score += 100;
-                scoreSpan.textContent = score;
-                
-                // Reponer uno nuevo
-                if (originLat) {
-                    setTimeout(() => generarMarcianos(originLat, originLon, 1), 800);
-                }
-            }
-        }
-
-        // --- Explosión de partículas (simple) ---
-        function createExplosion(position) {
-            const particleCount = 20;
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            for (let i = 0; i < particleCount * 3; i+=3) {
-                positions[i] = position.x;
-                positions[i+1] = position.y;
-                positions[i+2] = position.z;
-            }
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            
-            const material = new THREE.PointsMaterial({ color: 0xff6600, size: 0.3, blending: THREE.AdditiveBlending });
-            const particles = new THREE.Points(geometry, material);
-            scene.add(particles);
-            
-            const velocities = [];
-            for (let i = 0; i < particleCount; i++) {
-                velocities.push(new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.2,
-                    Math.random() * 0.2,
-                    (Math.random() - 0.5) * 0.2
-                ));
-            }
-            
-            let time = 0;
-            const interval = setInterval(() => {
-                if (time >= 20) {
-                    clearInterval(interval);
-                    scene.remove(particles);
-                    return;
-                }
-                const pos = particles.geometry.attributes.position.array;
-                for (let i = 0; i < particleCount; i++) {
-                    pos[i*3] += velocities[i].x;
-                    pos[i*3+1] += velocities[i].y;
-                    pos[i*3+2] += velocities[i].z;
-                    velocities[i].y -= 0.005;
-                }
-                particles.geometry.attributes.position.needsUpdate = true;
-                time++;
-            }, 30);
-        }
-
-        // --- Actualizar movimiento de marcianos (flotación y acercamiento) ---
-        function updateMarcianos() {
-            if (!gameActive || !originLat || !playerPosition.lat) return;
-            
-            const playerMeters = latLonToMeters(playerPosition.lat, playerPosition.lon, originLat, originLon);
-            
-            marcianos.forEach(marciano => {
-                const alienMeters = latLonToMeters(marciano.userData.lat, marciano.userData.lon, originLat, originLon);
-                
-                // Dirección al jugador
-                const dx = playerMeters.x - alienMeters.x;
-                const dz = playerMeters.z - alienMeters.z;
-                const dist = Math.sqrt(dx*dx + dz*dz);
-                
-                // Movimiento hacia el jugador si está lejos
-                if (dist > 4) {
-                    const speed = 0.015;
-                    const moveX = (dx / dist) * speed;
-                    const moveZ = (dz / dist) * speed;
-                    
-                    const deltaLat = -moveZ / 111320;
-                    const deltaLon = moveX / (111320 * Math.cos(originLat * Math.PI/180));
-                    
-                    marciano.userData.lat += deltaLat;
-                    marciano.userData.lon += deltaLon;
-                }
-                
-                // Recalcular posición relativa al jugador
-                const newMeters = latLonToMeters(marciano.userData.lat, marciano.userData.lon, originLat, originLon);
-                const relX = newMeters.x - playerMeters.x;
-                const relZ = newMeters.z - playerMeters.z;
-                
-                // Flotación senoidal
-                const floatY = Math.sin(Date.now() * 0.003 + marciano.userData.floatOffset) * 0.3;
-                marciano.position.set(relX, 1.0 + floatY, relZ);
-                
-                // Rotación para mirar al jugador (solo en Y)
-                marciano.lookAt(0, marciano.position.y, 0);
-                marciano.rotation.y += marciano.userData.rotationSpeed; // rotación adicional
-            });
-        }
-
-        // --- Colisiones (marciano toca al jugador) ---
-        function checkCollisions() {
-            if (!gameActive) return;
-            
-            marcianos.forEach(marciano => {
-                const dist = marciano.position.length();
-                if (dist < 2.5) {
-                    lives--;
-                    livesSpan.textContent = lives;
-                    
-                    scene.remove(marciano);
-                    marcianos = marcianos.filter(m => m !== marciano);
-                    
-                    if (lives <= 0) {
-                        gameActive = false;
-                        gameoverDiv.style.display = 'block';
-                        restartBtn.style.display = 'block';
-                    } else {
-                        // Reponer uno
-                        if (originLat) generarMarcianos(originLat, originLon, 1);
-                    }
-                }
-            });
-        }
-
-        // --- Reiniciar ---
-        function restartGame() {
-            lives = 3;
-            score = 0;
-            gameActive = true;
-            
-            livesSpan.textContent = lives;
-            scoreSpan.textContent = score;
-            gameoverDiv.style.display = 'none';
-            restartBtn.style.display = 'none';
-            
-            marcianos.forEach(m => scene.remove(m));
-            marcianos = [];
-            
-            if (originLat) {
-                generarMarcianos(originLat, originLon, 15);
-            }
-        }
-
-        restartBtn.addEventListener('click', restartGame);
-        shootBtn.addEventListener('click', shoot);
-        shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); shoot(); });
-
-        // --- Bucle de animación ---
+        // --- Animación ---
         function animate() {
             requestAnimationFrame(animate);
             
-            stars.rotation.y += 0.0002;
+            // Actualizar movimiento según joystick
+            updatePlayer();
             
-            updateMarcianos();
-            checkCollisions();
+            // Animar agua
+            water.material.uniforms['time'].value += 0.01;
+            
+            // Mover nubes lentamente
+            clouds.rotation.y += 0.0001;
             
             renderer.render(scene, camera);
         }
+        
         animate();
 
+        // --- Ajuste de tamaño de ventana ---
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Arrancar GPS
-        startGPS();
+        console.log('Mundo 3D iniciado');
     </script>
 </body>
 </html>
