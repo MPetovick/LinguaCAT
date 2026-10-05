@@ -1,0 +1,2046 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Joc de castells en 3D: aixeca, corona i descarrega torres humanes inclinant el mòbil.">
+<title>Castells · Diada a la plaça</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Castells 3D — estils. La faixa negra és l'element gràfic principal. */
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --faixa:#000;
+  --ink:#fbf7ee;
+  --muted:#c8bfae;
+  --groc:#f4c20d;
+  --vermell:#c8102e;
+  --ok:#5fbf6a;
+  --colla:#2f8a3e;
+  --panel:rgba(10,9,7,.9);
+  --display:"Big Shoulders Display","Arial Narrow","Roboto Condensed",sans-serif;
+  --text:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#fbf7ee; --panel:rgba(10,9,7,.9); } }
+:root[data-theme="dark"]{ --ink:#fbf7ee; --panel:rgba(10,9,7,.9); }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:#000;color:var(--ink);font-family:var(--text);
+  -webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hidden{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:disabled{cursor:default}
+button:focus-visible,input:focus-visible{outline:3px solid var(--groc);outline-offset:3px}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;left:0;right:0;top:0;padding-top:env(safe-area-inset-top,0px);background:var(--faixa);pointer-events:none;z-index:5}
+.faixa{padding:10px 64px 8px 16px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
+#hCastell{font-family:var(--display);font-weight:900;font-size:25px;line-height:1.02}
+#hPts{font-family:var(--display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+#hSub{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+#hProg{display:flex;gap:3px;padding:0 16px 8px}
+#hProg i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.18)}
+#hProg i.on{background:var(--colla)}
+#hud::after{content:"";display:block;height:4px;background:var(--colla)}
+#pauseBtn{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);width:44px;height:44px;border-radius:50%;z-index:6;
+  background:rgba(255,255,255,.12);font-size:16px;font-weight:700;letter-spacing:1px}
+
+/* Indicador d'equilibri: vista zenital de la pinya */
+#gauge{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 92px);width:120px;height:120px;border-radius:50%;z-index:6;pointer-events:none;
+  background:radial-gradient(circle,rgba(0,0,0,.25) 0 32%,rgba(0,0,0,.5) 33% 100%);transition:box-shadow .2s}
+#gauge svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#gauge.warn{animation:warn .45s ease-in-out infinite alternate}
+@keyframes warn{to{box-shadow:0 0 0 7px rgba(255,77,77,.55)}}
+#gDot,#gIn{position:absolute;left:50%;top:50%;border-radius:50%}
+#gDot{width:20px;height:20px;margin:-10px 0 0 -10px;background:var(--groc);box-shadow:0 0 0 3px #000}
+#gIn{width:14px;height:14px;margin:-7px 0 0 -7px;border:2.5px solid #fff;opacity:.85}
+#gauge .lbl{position:absolute;left:0;right:0;top:124px;text-align:center;font-size:11px;color:#fff;text-shadow:0 1px 3px #000}
+#kbNote{position:fixed;left:12px;top:calc(env(safe-area-inset-top,0px) + 236px);font-size:11px;color:#fff;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:6px;z-index:6}
+
+#status{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:6;max-width:calc(100% - 32px);
+  background:rgba(0,0,0,.72);padding:10px 16px;border-radius:999px;font-weight:600;font-size:15px;text-align:center;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#desmBtn{position:fixed;left:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:6;background:rgba(0,0,0,.7);border:1.5px solid rgba(255,255,255,.55);
+  padding:11px 16px;border-radius:999px;font-weight:600;font-size:14px}
+
+#calib{position:fixed;left:50%;top:44%;transform:translate(-50%,-50%);z-index:7;background:rgba(0,0,0,.75);padding:16px 20px;border-radius:14px;text-align:center;max-width:300px;pointer-events:none}
+#calib b{display:block;font-family:var(--display);font-size:26px;font-weight:900;margin-bottom:4px}
+#calib span{font-size:14px;color:var(--muted)}
+
+/* Aleta: tota la pantalla és el botó */
+#aletaLayer{position:fixed;inset:0;z-index:8;touch-action:none}
+#aTarget,#aRing{position:absolute;width:92px;height:92px;border-radius:50%;pointer-events:none}
+#aTarget{transform:translate(-50%,-50%);border:3px dashed rgba(244,194,13,.95);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+#aRing{border:5px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.45)}
+#aRing.zone{border-color:var(--ok)}
+#aHint{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-family:var(--display);font-weight:900;font-size:34px;
+  color:#000;padding:4px 18px;border-radius:8px;background:repeating-linear-gradient(90deg,var(--groc) 0 12px,var(--vermell) 12px 24px);box-shadow:0 0 0 4px #000}
+#aHint span{background:#000;color:#fff;padding:0 10px;border-radius:4px}
+
+#stamp{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) rotate(-5deg) scale(.6);opacity:0;z-index:9;pointer-events:none;
+  font-family:var(--display);font-weight:900;font-size:clamp(46px,13vw,104px);line-height:.92;text-align:center;
+  padding:10px 22px;border:6px solid currentColor;border-radius:8px;background:rgba(0,0,0,.55);transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .2s}
+#stamp.show{opacity:1;transform:translate(-50%,-50%) rotate(-5deg) scale(1)}
+#stamp small{display:block;font-size:.3em;font-weight:700;margin-top:6px}
+
+#pauseLayer{position:fixed;inset:0;z-index:12;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px}
+#pauseLayer .panel{width:100%;max-width:380px}
+
+/* ---------- Pantalles ---------- */
+#screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 22px)}
+#screen:empty{display:none}
+#screen.dim{background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.82) 50%)}
+#screen.clear{background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 45%,rgba(0,0,0,.85) 80%)}
+.wrap{width:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;min-height:100%}
+.grow{flex:1;min-height:24px}
+.title{font-family:var(--display);font-weight:900;font-size:clamp(76px,23vw,180px);line-height:.8;margin:0;letter-spacing:-1px;text-shadow:0 4px 30px rgba(0,0,0,.45)}
+.motto{font-size:18px;margin:12px 0 0;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+.lead{color:var(--muted);font-size:15px;line-height:1.5;margin:6px 0}
+.lead.small{font-size:13.5px;margin:14px 0 6px}
+.lead.big{font-size:19px;color:#fff}
+.note{color:var(--muted);font-size:14px;margin:12px 0 0}
+.note.gold{color:var(--groc)}
+.dim-t{color:var(--muted);margin:0;font-size:14px}
+h2{font-family:var(--display);font-weight:900;font-size:40px;line-height:1;margin:0 0 6px}
+h3{font-family:var(--display);font-weight:700;font-size:23px;margin:22px 0 6px}
+.panel{background:var(--panel);border-radius:16px;padding:20px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.btns{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.row{display:flex;gap:10px}.row>*{flex:1}
+.b1,.b2,.b3{border-radius:12px;text-align:left;padding:15px 18px;font-size:17px}
+.b1{background:var(--groc);color:#000;font-weight:700}
+.b1 small,.b2 small{display:block;font-weight:500;font-size:13px;opacity:.75;margin-top:2px}
+.b1:disabled{opacity:.4}
+.b2{background:rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.5);font-weight:600}
+.b3{background:rgba(0,0,0,.45);font-weight:600;font-size:15px;text-align:center;padding:13px}
+.danger{border-color:#ff6b6b;color:#ffb3b3}
+.back{align-self:flex-start;padding:8px 0 10px;color:var(--muted);font-size:15px}
+.colla-chip{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.55);border-radius:12px;padding:10px 12px;text-align:left;font-weight:600;font-size:15px}
+.colla-chip small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.colla-chip .sw{width:44px;height:44px;flex:none}
+.sw{display:block;height:34px;border-radius:7px;position:relative;overflow:hidden}
+.sw::after{content:"";position:absolute;left:0;right:0;bottom:0;height:28%;background:#000}
+.colles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.colla{display:flex;flex-direction:column;gap:8px;text-align:left;padding:11px;border-radius:12px;background:rgba(255,255,255,.06);border:2px solid transparent}
+.colla[aria-pressed="true"]{border-color:var(--groc)}
+.colla b{font-size:13.5px;line-height:1.25;font-weight:600}
+.toggle{display:flex;gap:8px}
+.toggle button{flex:1;padding:11px;border-radius:10px;border:1.5px solid rgba(255,255,255,.35);font-size:14px}
+.toggle button[aria-pressed="true"]{background:#fff;color:#000;border-color:#fff;font-weight:700}
+.sl{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-weight:600;font-size:14px}
+.sl span{font-weight:400;color:var(--muted);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--groc);height:28px}
+.glist{margin-top:4px}
+.cs{display:grid;grid-template-columns:1fr auto;gap:2px 12px;width:100%;text-align:left;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.12)}
+.cs:disabled{opacity:.35}
+.cs .nm{font-weight:600;font-size:15px}
+.cs .cd{font-family:var(--display);font-weight:700;font-size:20px;text-align:right}
+.cs .pt{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.diff{display:flex;gap:3px;justify-content:flex-end;align-items:center}
+.diff i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2)}
+.diff i.on{background:var(--groc)}
+.mlist{margin-top:10px;display:flex;flex-direction:column}
+.ms{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;text-align:left;padding:12px 2px;border-bottom:1px solid rgba(255,255,255,.12)}
+.ms:disabled{opacity:.38}
+.ms .n{font-family:var(--display);font-weight:900;font-size:24px;text-align:center;color:var(--muted)}
+.ms.ok .n{color:var(--groc)}
+.ms b{display:block;font-size:15.5px}
+.ms small{color:var(--muted);font-size:13px}
+.st i,.bigstars i{font-style:normal;color:rgba(255,255,255,.22)}
+.st i.on,.bigstars i.on{color:var(--groc)}
+.bigstars{font-size:44px;letter-spacing:6px;margin:4px 0}
+.res{font-family:var(--display);font-weight:900;font-size:54px;line-height:1;margin:6px 0}
+table.sum{width:100%;border-collapse:collapse;margin-top:12px;font-variant-numeric:tabular-nums}
+table.sum td{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.12);font-size:15px}
+table.sum td:last-child{text-align:right;font-weight:700}
+.tot{font-size:22px}
+.guide p,.guide li{color:#e9e1d2;line-height:1.55;font-size:15px}
+.guide ul{padding-left:18px}
+.guide b{color:#fff}
+.tut .tutpad{position:relative;width:250px;height:250px;margin:16px auto;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.08) 0 40%,rgba(255,255,255,.03) 41%);border:2px dashed rgba(255,255,255,.25)}
+.tutpad .tgt,.tutpad .me{position:absolute;left:50%;top:50%;border-radius:50%}
+.tutpad .tgt{width:58px;height:58px;margin:-29px 0 0 -29px;border:4px solid var(--groc);transition:background .15s}
+.tutpad .tgt.in{background:rgba(244,194,13,.35)}
+.tutpad .me{width:22px;height:22px;margin:-11px 0 0 -11px;background:#fff;box-shadow:0 0 0 3px #000}
+@media (prefers-reduced-motion: reduce){#stamp{transition:none}#gauge.warn{animation:none;box-shadow:0 0 0 6px rgba(255,77,77,.55)}}
+@media (min-width:700px){.colles{grid-template-columns:1fr 1fr 1fr}}
+
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Plaça castellera en 3D"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="faixa"><div id="hCastell">—</div><div id="hPts"></div><div id="hSub"></div></div>
+  <div id="hProg" aria-hidden="true"></div>
+</div>
+<button id="pauseBtn" class="hidden" aria-label="Pausa">II</button>
+
+<div id="gauge" class="hidden" role="img" aria-label="Inclinació del castell">
+  <svg viewBox="0 0 120 120" aria-hidden="true">
+    <defs><marker id="ah" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto"><path d="M0,0 L4,2 L0,4 z" fill="#5fbf6a"/></marker></defs>
+    <circle cx="60" cy="60" r="56" fill="none" stroke="#c8102e" stroke-width="4" stroke-dasharray="6 5"/>
+    <circle cx="60" cy="60" r="38" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>
+    <circle cx="60" cy="60" r="13" fill="rgba(255,255,255,.14)"/>
+    <line id="gPush" x1="60" y1="60" x2="60" y2="60" stroke="#5fbf6a" stroke-width="5" stroke-linecap="round" marker-end="url(#ah)" style="opacity:0"/>
+  </svg>
+  <div id="gIn"></div><div id="gDot"></div>
+  <div class="lbl">inclina cap a la fletxa</div>
+</div>
+<div id="kbNote" class="hidden">Mode ordinador: fletxes i espai</div>
+
+<div id="status" class="hidden" aria-live="polite"></div>
+<button id="desmBtn" class="hidden">Desmuntar</button>
+
+<div id="calib" class="hidden"><b>Fent pinya</b><span>Agafa el mòbil en una postura còmoda i mantén-lo quiet: és la posició neutra.</span></div>
+
+<div id="aletaLayer" class="hidden" aria-label="Toca per fer l'aleta">
+  <div id="aTarget"></div><div id="aRing"></div>
+  <div id="aHint"><span>Aleta!</span></div>
+</div>
+
+<div id="stamp" aria-live="assertive"></div>
+
+<div id="pauseLayer" class="hidden" role="dialog" aria-modal="true" aria-label="Pausa">
+  <div class="panel"><h2>Pausa</h2>
+    <div class="btns"><button class="b1" id="pContinue">Continuar</button><button class="b2" id="pCalib">Recalibrar postura</button><button class="b2" id="pQuit">Sortir al menú</button></div>
+  </div>
+</div>
+
+<div id="screen"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* Castells 3D — dades: taula de puntuacions, colles, dificultat i temporada */
+(function (CS) {
+  'use strict';
+
+  // Taula de puntuacions del XXX Concurs de Castells (2026).
+  // [codi, persones per pis (1 = pilar), pisos, estructura, punts carregat, punts descarregat]
+  const TAULA_2026 = [
+    ['Pd5', 1, 5, '', 260, 315], ['2d6', 2, 6, '', 250, 300], ['9d6', 9, 6, '', 295, 355],
+    ['4d7', 4, 7, '', 325, 395], ['3d7', 3, 7, '', 345, 415], ['4d7a', 4, 7, 'a', 465, 515],
+    ['9d7', 9, 7, '', 615, 740], ['2d7', 2, 7, '', 670, 805], ['4d8', 4, 8, '', 700, 845],
+    ['Pd6', 1, 6, '', 765, 920], ['3d8', 3, 8, '', 805, 970], ['7d8', 7, 8, '', 905, 1090],
+    ['2d8f', 2, 8, 'f', 1005, 1210], ['Pd7f', 1, 7, 'f', 1055, 1270], ['5d8', 5, 8, '', 1150, 1385],
+    ['3d8a', 3, 8, 'a', 1375, 1530], ['7d8a', 7, 8, 'a', 1475, 1635], ['4d9f', 4, 9, 'f', 1510, 1820],
+    ['5d8a', 5, 8, 'a', 1555, 1730], ['3d9f', 3, 9, 'f', 1585, 1910], ['9d8', 9, 8, '', 1980, 2385],
+    ['2d9fm', 2, 9, 'fm', 2265, 2730], ['Pd8fm', 1, 8, 'fm', 2380, 2870], ['7d9f', 7, 9, 'f', 2500, 3010],
+    ['5d9f', 5, 9, 'f', 2595, 3125], ['4d9fa', 4, 9, 'fa', 2955, 3285], ['3d9fa', 3, 9, 'fa', 3100, 3445],
+    ['4d9sf', 4, 9, '', 3405, 4105], ['2d8sf', 2, 8, '', 3575, 4310], ['3d10fm', 3, 10, 'fm', 3755, 4525],
+    ['4d10fm', 4, 10, 'fm', 4095, 4930], ['9d9f', 9, 9, 'f', 4295, 5180], ['2d9sm', 2, 9, 'f', 4685, 5645],
+    ['Pd9fmp', 1, 9, 'fmp', 4920, 5925], ['3d9sf', 3, 9, '', 5165, 6220], ['Pd7sf', 1, 7, '', 5280, 6360],
+    ['2d10fmp', 2, 10, 'fmp', 5630, 6780], ['4d10sm', 4, 10, 'f', 5910, 7120], ['3d10sm', 3, 10, 'f', 6205, 7475]
+  ];
+  // Castells d'iniciació (fora de la taula del Concurs): serveixen per aprendre.
+  const INICIACIO = [['Pd4', 1, 4, ''], ['3d6', 3, 6, ''], ['4d6', 4, 6, '']];
+
+  const NOM_N = { 1: 'Pilar', 2: 'Dos', 3: 'Tres', 4: 'Quatre', 5: 'Cinc', 7: 'Set', 9: 'Nou' };
+  const NOM_P = { 4: 'quatre', 5: 'cinc', 6: 'sis', 7: 'set', 8: 'vuit', 9: 'nou', 10: 'deu' };
+
+  function nom(id, n, p, fl) {
+    let s = NOM_N[n] + ' de ' + NOM_P[p];
+    if (fl.includes('a')) s += " amb l'agulla";
+    if (id.includes('sf')) s += ' sense folre';
+    else if (id.includes('sm')) s += ' amb folre sense manilles';
+    else if (fl.includes('f')) s += ' amb folre' + (fl.includes('m') ? (fl.includes('p') ? ', manilles i puntals' : ' i manilles') : '');
+    return s;
+  }
+
+  const LOG_MIN = Math.log2(250), LOG_MAX = Math.log2(7475);
+  function mkCastell(id, n, p, fl, C, D, fora) {
+    // Índex de dificultat 0..1 a partir dels punts (els punts ordenen per dificultat real)
+    const d = fora ? ({ Pd4: 0, '3d6': 0.02, '4d6': 0.04 })[id]
+      : Math.min(1, Math.max(0.05, (Math.log2(D) - LOG_MIN) / (LOG_MAX - LOG_MIN)));
+    return { id, n, pisos: p, flags: fl, C: C || 0, D: D || 0, fora: !!fora, name: nom(id, n, p, fl), d };
+  }
+
+  const CASTELLS = [
+    ...INICIACIO.map(r => mkCastell(r[0], r[1], r[2], r[3], 0, 0, true)),
+    ...TAULA_2026.map(r => mkCastell(...r))
+  ].sort((a, b) => a.d - b.d || a.D - b.D);
+  const byId = id => CASTELLS.find(c => c.id === id);
+
+  /* Paràmetres de joc derivats de la dificultat.
+     La corba és suau al principi (aprenentatge) i s'accelera a la gamma extra. */
+  function params(c) {
+    const d = c.d, e = Math.pow(d, 1.25);
+    return {
+      k: 0.22 + 2.0 * e,            // inestabilitat (pèndol invertit)
+      gust: 0.06 + 0.95 * e,        // rauxes aleatòries (desequilibris)
+      seat: 0.04 + 0.26 * e,        // sacsejada en col·locar-se cada pis
+      assist: 0.9 * Math.pow(1 - d, 2.2), // ajuda de recentrat (només als primers)
+      aWin: 0.26 - 0.15 * d,        // amplada de la finestra de l'aleta (fracció del cicle)
+      aCycle: 1.55 - 0.4 * d        // durada del cicle de l'aleta (s)
+    };
+  }
+
+  /* Colles. Colors de camisa segons la Coordinadora de Colles Castelleres i fonts locals;
+     els tons són aproximats. */
+  const COLLES = [
+    { id: 'vilafranca', name: 'Castellers de Vilafranca', color: '#2f8a3e' },
+    { id: 'vella', name: 'Colla Vella dels Xiquets de Valls', color: '#e78fae' },
+    { id: 'joves', name: 'Colla Joves Xiquets de Valls', color: '#c41f2e' },
+    { id: 'jovetgn', name: 'Colla Jove Xiquets de Tarragona', color: '#8b62b4' },
+    { id: 'minyons', name: 'Minyons de Terrassa', color: '#b28fc4' },
+    { id: 'capgrossos', name: 'Capgrossos de Mataró', color: '#24438a' },
+    { id: 'barcelona', name: 'Castellers de Barcelona', color: '#cc2431' },
+    { id: 'sants', name: 'Castellers de Sants', color: '#8d8c86' },
+    { id: 'gracia', name: 'Castellers de la Vila de Gràcia', color: '#2f6fb8' },
+    { id: 'xiquetstgn', name: 'Xiquets de Tarragona', color: '#c8102e', stripes: '#f3efe6' },
+    { id: 'moixiganguers', name: "Moixiganguers d'Igualada", color: '#5d2b73' },
+    { id: 'reus', name: 'Xiquets de Reus', color: '#7a4b2c' },
+    { id: 'sabadell', name: 'Castellers de Sabadell', color: '#3f9150' },
+    { id: 'salt', name: 'Marrecs de Salt', color: '#3d82ad' },
+    { id: 'santcugat', name: 'Castellers de Sant Cugat', color: '#4f9d4f' },
+    { id: 'spsp', name: 'Castellers de Sant Pere i Sant Pau', color: '#2e7a4c' },
+    { id: 'serrallo', name: 'Xiquets del Serrallo', color: '#1f2d55' },
+    { id: 'hospitalet', name: "Colla Jove de l'Hospitalet", color: '#7d8f3a' },
+    { id: 'sagrada', name: 'Castellers de la Sagrada Família', color: '#3b8a5c' },
+    { id: 'santpedor', name: 'Castellers de Santpedor', color: '#c9a23b' }
+  ];
+
+  /* Temporada: el camí d'aprenentatge, de menys a més.
+     Cada fita s'obre en descarregar l'anterior. */
+  const TEMPORADA = [
+    { id: 'Pd4', t: 'Primer assaig' }, { id: '3d6', t: 'Assaig de dijous' }, { id: '4d6', t: 'Diada local' },
+    { id: 'Pd5', t: 'Pilar de la plaça' }, { id: '2d6', t: 'La primera torre' }, { id: '3d7', t: 'Festa major' },
+    { id: '4d7', t: 'Colla de set' }, { id: '4d7a', t: "L'agulla" }, { id: '2d7', t: 'Torre de set' },
+    { id: '4d8', t: 'El salt a vuit' }, { id: '3d8', t: 'Clàssic de vuit' }, { id: 'Pd6', t: 'Pilar de sis' },
+    { id: '2d8f', t: 'Primer folre' }, { id: '5d8', t: 'Castell compost' }, { id: '4d9f', t: 'Gamma de nou' },
+    { id: '3d9f', t: 'El tres de nou' }, { id: '9d8', t: 'El nou de vuit' }, { id: 'Pd8fm', t: 'Pilar de vuit' },
+    { id: '5d9f', t: 'Cinc de nou' }, { id: '3d9fa', t: 'Tres de nou amb agulla' }, { id: '4d9sf', t: 'Sense folre' },
+    { id: '3d10fm', t: 'El primer de deu' }, { id: '4d10fm', t: 'Quatre de deu' }, { id: '9d9f', t: 'Nou de nou' },
+    { id: '2d9sm', t: 'Torre de nou' }, { id: 'Pd9fmp', t: 'Pilar de nou' }, { id: '3d10sm', t: 'La cima' }
+  ];
+
+  const LVL = ['baixos', 'segons', 'terços', 'quarts', 'quints', 'sisens', 'setens', 'vuitens', 'novens'];
+
+  CS.data = { CASTELLS, byId, params, COLLES, TEMPORADA, LVL };
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — castellers: geometria low-poly fusionada amb colors per vèrtex */
+(function (CS) {
+  'use strict';
+  const V3 = THREE.Vector3;
+  const UPY = new V3(0, 1, 0);
+  const _c = new THREE.Color(), _p = new V3();
+
+  // Material compartit: un sol draw call per persona, colors per vèrtex
+  const MAT = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+  const M = (x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) =>
+    new THREE.Matrix4().compose(new V3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new V3(sx, sy, sz));
+
+  /* Afegeix una peça amb color (o funció de color per triangle) i oclusió ambiental falsa per alçada */
+  function part(list, geo, color, m, colorFn) {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    geo !== g && geo.dispose();
+    g.applyMatrix4(m);
+    const pos = g.attributes.position, n = pos.count, arr = new Float32Array(n * 3);
+    const base = new THREE.Color(color).convertSRGBToLinear();
+    for (let t = 0; t < n; t += 3) {
+      let col = base;
+      if (colorFn) {
+        _p.set((pos.getX(t) + pos.getX(t + 1) + pos.getX(t + 2)) / 3, (pos.getY(t) + pos.getY(t + 1) + pos.getY(t + 2)) / 3, (pos.getZ(t) + pos.getZ(t + 1) + pos.getZ(t + 2)) / 3);
+        col = colorFn(_p);
+      }
+      for (let k = 0; k < 3; k++) {
+        const y = pos.getY(t + k);
+        const ao = 0.72 + 0.28 * Math.min(1, Math.max(0, y / 1.75)); // més fosc a prop de terra
+        arr[(t + k) * 3] = col.r * ao; arr[(t + k) * 3 + 1] = col.g * ao; arr[(t + k) * 3 + 2] = col.b * ao;
+      }
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    if (g.attributes.uv) g.deleteAttribute('uv');
+    list.push(g);
+  }
+  function merge(list) {
+    let tot = 0; list.forEach(g => (tot += g.attributes.position.count));
+    const P = new Float32Array(tot * 3), N = new Float32Array(tot * 3), C = new Float32Array(tot * 3);
+    let o = 0;
+    for (const g of list) {
+      P.set(g.attributes.position.array, o * 3); N.set(g.attributes.normal.array, o * 3); C.set(g.attributes.color.array, o * 3);
+      o += g.attributes.position.count; g.dispose();
+    }
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    out.setAttribute('color', new THREE.BufferAttribute(C, 3));
+    out.computeBoundingSphere();
+    return out;
+  }
+  // Cilindre entre dos punts
+  function seg(list, a, b, r0, r1, color, sides = 7) {
+    const d = new V3().subVectors(b, a), len = d.length();
+    const q = new THREE.Quaternion().setFromUnitVectors(UPY, d.clone().normalize());
+    part(list, new THREE.CylinderGeometry(r1, r0, len, sides), color, new THREE.Matrix4().compose(a.clone().addScaledVector(d, 0.5), q, new V3(1, 1, 1)));
+  }
+
+  /* Postures dels braços: direcció del braç i de l'avantbraç per a cada costat (s = -1 esquerra, 1 dreta) */
+  const POSES = {
+    down: s => [[s * 0.16, -1, 0.03], [s * 0.05, -1, 0.18]],
+    pinya: s => [[s * 0.22, -0.05, 1], [s * 0.05, 0.45, 1]],          // mans a l'esquena del de davant
+    mans: s => [[s * 0.25, 0.75, 0.65], [s * 0.08, 1, 0.25]],          // primeres mans: braços amunt
+    shoulders: s => [[s * 1, 0.05, 0.18], [s * 0.85, 0.2, 0.45]],      // tronc: agafats a les espatlles
+    torre: s => [[s * 0.22, 0.12, 1], [s * 0.05, 0.25, 1]],
+    pilar: s => [[s * 0.32, 0.6, 0.3], [s * 0.12, 1, 0.08]],
+    climb: s => [[s * 0.38, 1, 0.3], [s * 0.18, 1, 0.15]],
+    crouch: s => [[s * 0.32, -0.55, 0.85], [s * 0.1, -1, 0.35]],
+    aleta: s => s > 0 ? [[0.3, 1, 0.05], [0.15, 1, -0.02]] : [[-0.65, -0.55, 0.25], [-0.3, -1, 0.35]],
+    cheer: s => [[s * 0.4, 1, 0.1], [s * 0.25, 1, 0]],
+    gralla: s => [[s * 0.28, -0.35, 0.8], [-s * 0.55, 0.55, 0.65]],
+    // enfilant-se: una mà amunt agafant l'espatlla, l'altra estirant la faixa
+    climbL: s => s < 0 ? [[-0.3, 1, 0.4], [-0.12, 1, 0.3]] : [[0.45, 0.05, 0.85], [0.12, -0.45, 1]],
+    climbR: s => s > 0 ? [[0.3, 1, 0.4], [0.12, 1, 0.3]] : [[-0.45, 0.05, 0.85], [-0.12, -0.45, 1]],
+    walkA: s => s < 0 ? [[-0.12, -1, 0.3], [-0.05, -1, 0.45]] : [[0.12, -1, -0.3], [0.05, -1, -0.1]],
+    walkB: s => s > 0 ? [[0.12, -1, 0.3], [0.05, -1, 0.45]] : [[-0.12, -1, -0.3], [-0.05, -1, -0.1]],
+    tabal: s => [[s * 0.35, -0.5, 0.75], [s * 0.05, -0.1, 1]]
+  };
+
+  /* Cames: [maluc→genoll, genoll→turmell] per costat; null = drets */
+  const LEGS = {
+    climbL: s => s > 0 ? [[0, -0.45, 0.9], [0, -1, 0.1]] : null,   // cama contrària a la mà alta
+    climbR: s => s < 0 ? [[0, -0.45, 0.9], [0, -1, 0.1]] : null,
+    walkA: s => s < 0 ? [[0, -1, 0.3], [0, -1, -0.05]] : [[0, -1, -0.25], [0, -1, -0.4]],
+    walkB: s => s > 0 ? [[0, -1, 0.3], [0, -1, -0.05]] : [[0, -1, -0.25], [0, -1, -0.4]],
+    climb: s => s < 0 ? [[0, -0.6, 0.75], [0, -1, 0.05]] : null
+  };
+  const SKINS = ['#e6b994', '#d6a37c', '#c48b64', '#efcaa8', '#a8774f', '#8a5a3a'];
+  const HAIRS = ['#2a1d14', '#4a3322', '#15110e', '#7a5a3a', '#3b2a1e', '#a8a39c', '#b07a3e'];
+
+  /* Variants d'aspecte: pell, cabell, pentinat, mocador */
+  function look(i, extra) {
+    return Object.assign({
+      skin: SKINS[i % SKINS.length], hair: HAIRS[(i * 3) % HAIRS.length],
+      hairStyle: ['curt', 'curt', 'llarg', 'cua', 'curt', 'monyo'][(i * 5) % 6],
+      moc: ['coll', 'coll', 'coll', 'cap', 'coll', 'cap', 'coll'][(i * 5) % 7],
+      mocColor: ['#b3262e', '#b3262e', '#a51f2a', '#c9302c', '#f2ede1'][(i * 3) % 5]
+    }, extra || {});
+  }
+
+  const cache = new Map();
+  /* o: { shirt, stripes, pose, helmet, shoes, skin, hair, hairStyle, moc, mocColor, helmetBand } */
+  function geo(o) {
+    const key = JSON.stringify(o);
+    if (cache.has(key)) return cache.get(key);
+    const L = [];
+    const SK = o.skin || SKINS[0], HR = o.hair || HAIRS[0];
+    const PANT = '#f2f0e8', FX = '#0b0b0b', MOC = o.mocColor || '#b3262e';
+    const shirtFn = o.stripes ? (p => {
+      const a = Math.atan2(p.x, p.z), k = Math.floor(((a + Math.PI) / (2 * Math.PI)) * 14);
+      return _c.set(k % 2 ? o.stripes : o.shirt).convertSRGBToLinear().clone();
+    }) : null;
+
+    // Cames amb genoll i peus (descalços al tronc, calçats a la pinya)
+    const legPose = LEGS[o.pose];
+    for (const s of [-1, 1]) {
+      const lp = legPose && legPose(s);
+      const hip = new V3(s * 0.095, 0.88, 0);
+      const knee = lp ? hip.clone().addScaledVector(new V3(...lp[0]).normalize(), 0.42) : new V3(s * 0.095, 0.47, 0.02);
+      const ank = lp ? knee.clone().addScaledVector(new V3(...lp[1]).normalize(), 0.4) : new V3(s * 0.095, 0.07, 0);
+      seg(L, hip, knee, 0.085, 0.075, PANT, 8);
+      seg(L, knee, ank, 0.072, 0.06, PANT, 8);
+      part(L, new THREE.BoxGeometry(0.1, 0.06, 0.22), o.shoes ? '#3b342c' : SK, M(ank.x, ank.y - 0.04, ank.z + 0.05));
+    }
+    // Faixa negra amb voltes i el nus al darrere
+    part(L, new THREE.CylinderGeometry(0.2, 0.195, 0.28, 14), FX, M(0, 0.9, 0));
+    part(L, new THREE.TorusGeometry(0.2, 0.012, 4, 16), '#262626', M(0, 0.83, 0, Math.PI / 2));
+    part(L, new THREE.TorusGeometry(0.198, 0.012, 4, 16), '#262626', M(0, 0.97, 0, Math.PI / 2));
+    part(L, new THREE.BoxGeometry(0.1, 0.24, 0.03), FX, M(0.06, 0.75, -0.2, 0.15, 0, 0.12));
+    // Camisa (amb ratlles si cal)
+    part(L, new THREE.CylinderGeometry(0.228, 0.185, 0.5, 14), o.shirt, M(0, 1.27, 0), shirtFn);
+    part(L, new THREE.SphereGeometry(0.228, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), o.shirt, M(0, 1.5, 0, 0, 0, 0, 1, 0.42, 0.8), shirtFn);
+    // Coll i cap
+    part(L, new THREE.CylinderGeometry(0.055, 0.06, 0.1, 8), SK, M(0, 1.57, 0));
+    part(L, new THREE.SphereGeometry(0.118, 14, 10), SK, M(0, 1.69, 0.01, 0, 0, 0, 1, 1.08, 1));
+    part(L, new THREE.BoxGeometry(0.03, 0.04, 0.04), SK, M(0, 1.68, 0.125));
+    // Mocador al coll (amb la punta al darrere)
+    if (o.moc === 'coll') {
+      part(L, new THREE.CylinderGeometry(0.075, 0.1, 0.06, 10), MOC, M(0, 1.555, 0));
+      part(L, new THREE.ConeGeometry(0.07, 0.14, 3), MOC, M(0, 1.47, -0.16, Math.PI + 0.25, 0, 0));
+    }
+    // Casc, mocador al cap o cabell
+    if (o.helmet) {
+      part(L, new THREE.SphereGeometry(0.142, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2), '#f5f5f2', M(0, 1.71, 0, 0, 0, 0, 1, 1.05, 1.08));
+      part(L, new THREE.TorusGeometry(0.138, 0.016, 4, 18), o.helmetBand || o.shirt, M(0, 1.72, 0, Math.PI / 2));
+    } else {
+      part(L, new THREE.SphereGeometry(0.126, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.1), o.moc === 'cap' ? MOC : HR, M(0, 1.715, -0.012));
+      if (o.moc === 'cap') part(L, new THREE.ConeGeometry(0.05, 0.1, 3), MOC, M(0, 1.67, -0.14, -2.2, 0, 0));
+      if (o.hairStyle === 'llarg') part(L, new THREE.BoxGeometry(0.2, 0.26, 0.06), HR, M(0, 1.58, -0.1));
+      if (o.hairStyle === 'cua') part(L, new THREE.CylinderGeometry(0.03, 0.045, 0.22, 6), HR, M(0, 1.6, -0.15, -0.3));
+      if (o.hairStyle === 'monyo') part(L, new THREE.SphereGeometry(0.06, 8, 6), HR, M(0, 1.78, -0.1));
+    }
+    // Braços: màniga arromangada fins al colze, avantbraç nu i mà
+    const pose = POSES[o.pose] || POSES.down;
+    for (const s of [-1, 1]) {
+      const [u, f] = pose(s);
+      const sh = new V3(s * 0.25, 1.43, 0);
+      const el = sh.clone().addScaledVector(new V3(...u).normalize(), 0.3);
+      const wr = el.clone().addScaledVector(new V3(...f).normalize(), 0.27);
+      seg(L, sh, el, 0.07, 0.06, o.shirt);
+      seg(L, el, wr, 0.05, 0.042, SK);
+      part(L, new THREE.SphereGeometry(0.052, 7, 5), SK, M(wr.x, wr.y, wr.z));
+    }
+    if (o.pose === 'gralla') {
+      part(L, new THREE.CylinderGeometry(0.03, 0.06, 0.38, 10), '#6b4423', M(0, 1.5, 0.3, 1.2, 0, 0));
+      part(L, new THREE.CylinderGeometry(0.06, 0.09, 0.06, 10), '#4d2f18', M(0, 1.42, 0.47, 1.2, 0, 0));
+    }
+    if (o.pose === 'tabal') {
+      part(L, new THREE.CylinderGeometry(0.21, 0.21, 0.26, 16), '#8b2a1c', M(0, 1.0, 0.28));
+      part(L, new THREE.CylinderGeometry(0.215, 0.215, 0.02, 16), '#efe6d0', M(0, 1.14, 0.28));
+    }
+    const out = merge(L);
+    cache.set(key, out);
+    return out;
+  }
+
+  CS.people = { geo, look, MAT, SKINS, HAIRS };
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — so: gralles (xeremia de doble canya, tub cònic), timbal i plaça.
+   El toc segueix l'estructura del toc de castells: inici, pujada, trino de l'aleta,
+   aleta, baixada (tres notes descendents) i sortida. Si el castell cau, les gralles callen.
+   Les melodies són originals, inspirades en l'estil tradicional. */
+(function (CS) {
+  'use strict';
+  const A = { ctx: null, ready: false, vol: { music: 0.8, sfx: 0.8 } };
+
+  // Semitons respecte de Re4 (293.66 Hz). Durades en temps.
+  const PH = {
+    inici: [[12, 1.25, 'g'], [7, 0.5], [12, 0.75], [14, 0.25], [12, 0.5], [9, 0.5], [12, 1.5]],
+    pujA: [[7, 0.5, 'g'], [9, 0.25], [11, 0.25], [12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [9, 1],
+           [7, 0.5], [5, 0.5], [4, 0.5], [2, 0.5], [4, 1], [0, 1]],
+    pujB: [[12, 0.75, 'g'], [11, 0.25], [9, 0.5], [11, 0.75], [9, 0.25], [7, 0.5], [9, 0.5], [7, 0.5], [4, 0.5], [7, 1.5],
+           [4, 0.5], [5, 0.5], [7, 0.5], [9, 0.75], [7, 0.25], [5, 0.5], [4, 1.5]],
+    trino: [[12, 0.16], [14, 0.16]],
+    aleta: [[19, 2.4, 'g'], [17, 0.25], [16, 0.25], [14, 0.5], [12, 1.2]],
+    baixIni: [[19, 1.1], [16, 1.1], [12, 1.4]],
+    baix: [[12, 0.5], [11, 0.5], [9, 0.5], [7, 0.5], [9, 0.5], [11, 0.5], [12, 1], [14, 0.5], [12, 0.5], [11, 0.5], [9, 0.5], [7, 1.5],
+           [5, 0.5], [7, 0.5], [9, 0.5], [7, 0.5], [5, 0.5], [4, 0.5], [2, 1], [4, 0.5], [5, 0.5], [7, 1.5]],
+    sortida: [[12, 0.25, 'g'], [14, 0.25], [16, 0.5], [14, 0.25], [12, 0.25], [11, 0.5], [12, 0.25], [14, 0.25], [12, 0.5], [7, 0.5],
+              [9, 0.25], [11, 0.25], [12, 0.5], [16, 0.5], [19, 2]]
+  };
+  // Segona veu: una tercera per sota dins de Re major
+  const THIRD = { 0: -3, 2: -3, 4: -4, 5: -3, 7: -3, 9: -4, 11: -4, 10: -3 };
+  const SEGONA = new Set(['pujB', 'baix', 'sortida', 'aleta']);
+  const BEAT = 0.37;
+
+  function init() {
+    if (A.ctx) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
+    try {
+      const c = A.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      A.master = c.createGain(); A.master.connect(c.destination);
+      const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3;
+      comp.connect(A.master);
+      A.music = c.createGain(); A.sfx = c.createGain();
+      // Reverberació de plaça (resposta impulsional generada)
+      const rev = c.createConvolver(); rev.buffer = impulse(c, 2.4, 2.8);
+      const revG = c.createGain(); revG.gain.value = 0.32; rev.connect(revG); revG.connect(comp);
+      A.music.connect(comp); A.music.connect(rev); A.sfx.connect(comp); A.sfx.connect(rev);
+
+      // Cadena de timbre de la gralla: formants nasals, brillantor i una mica d'aspror (gralla seca)
+      A.gin = c.createGain(); A.gin.gain.value = 1;
+      const sh = c.createWaveShaper(); sh.curve = curve(1.6); sh.oversample = '2x';
+      const f1 = peak(c, 1250, 1.1, 7), f2 = peak(c, 2900, 1.6, 5), f3 = peak(c, 520, 1, -4);
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6800;
+      const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 260;
+      A.gin.connect(sh); sh.connect(f3); f3.connect(f1); f1.connect(f2); f2.connect(lp); lp.connect(hp); hp.connect(A.music);
+
+      // Espectre d'una canya doble en tub cònic: sèrie harmònica completa, fonamental més feble que els harmònics 2-4
+      const H = [0, 0.55, 1.0, 0.9, 0.78, 0.62, 0.55, 0.42, 0.36, 0.28, 0.22, 0.18, 0.14, 0.11, 0.09, 0.07, 0.06, 0.05, 0.04, 0.03];
+      const real = new Float32Array(H.length), imag = new Float32Array(H.length);
+      H.forEach((h, i) => { imag[i] = h * (i % 2 ? 1 : 0.85); real[i] = i > 1 ? h * 0.25 : 0; });
+      A.wave = c.createPeriodicWave(real, imag);
+
+      const len = c.sampleRate * 2, buf = c.createBuffer(1, len, c.sampleRate), ch = buf.getChannelData(0);
+      let b = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; ch[i] = w; }
+      A.noise = buf;
+      const bbuf = c.createBuffer(1, len, c.sampleRate), bch = bbuf.getChannelData(0);
+      for (let i = 0; i < len; i++) { b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; bch[i] = b * 3.5; }
+      A.brown = bbuf;
+      setupCrowd();
+      setVolumes(A.vol.music, A.vol.sfx);
+      A.timer = setInterval(sched, 30);
+      A.ready = true;
+    } catch (e) { A.ctx = null; A.ready = false; }
+  }
+  function impulse(c, secs, decay) {
+    const n = Math.floor(c.sampleRate * secs), b = c.createBuffer(2, n, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = b.getChannelData(ch);
+      for (let i = 0; i < n; i++) {
+        const t = i / n;
+        let v = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+        // primeres reflexions de les façanes
+        if (i === Math.floor(c.sampleRate * (0.031 + ch * 0.007)) || i === Math.floor(c.sampleRate * (0.058 + ch * 0.011))) v += 0.6;
+        d[i] = v * 0.6;
+      }
+    }
+    return b;
+  }
+  function curve(k) { const n = 1024, a = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; a[i] = Math.tanh(k * x) / Math.tanh(k); } return a; }
+  function peak(c, f, q, g) { const p = c.createBiquadFilter(); p.type = 'peaking'; p.frequency.value = f; p.Q.value = q; p.gain.value = g; return p; }
+  function setVolumes(m, s) {
+    A.vol.music = m; A.vol.sfx = s;
+    if (!A.ctx) return;
+    A.music.gain.value = 0.55 * m; A.sfx.gain.value = 0.9 * s;
+  }
+
+  /* --- Una nota de gralla --- */
+  function gralla(t, semi, dur, vol, detune, grace) {
+    const c = A.ctx, f = 293.66 * Math.pow(2, semi / 12);
+    const o = c.createOscillator(); o.setPeriodicWave(A.wave);
+    o.detune.value = detune;
+    // atac amb una petita pujada d'afinació, com quan la canya entra
+    o.frequency.setValueAtTime(f * 0.975, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.045);
+    if (grace) { o.frequency.setValueAtTime(f * 1.1225, t); o.frequency.setValueAtTime(f, t + 0.06); }
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+    g.gain.setValueAtTime(vol, t + Math.max(0.04, dur - 0.05)); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.02);
+    if (dur > 0.45) { // vibrato tardà a les notes llargues
+      const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 5.2 + Math.random() * 0.6;
+      lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(14, t + Math.min(0.5, dur * 0.6));
+      lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(t + dur + 0.05);
+    }
+    o.connect(g); g.connect(A.gin); o.start(t); o.stop(t + dur + 0.06);
+    // buf: soroll d'aire de la canya
+    const n = c.createBufferSource(); n.buffer = A.noise;
+    const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = f * 4; nf.Q.value = 2;
+    const ng = c.createGain(); ng.gain.setValueAtTime(vol * 0.05, t); ng.gain.linearRampToValueAtTime(0, t + dur);
+    n.connect(nf); nf.connect(ng); ng.connect(A.music); n.start(t, Math.random()); n.stop(t + dur + 0.05);
+  }
+  /* --- Timbal: membrana greu + rebot de pell --- */
+  function timbal(t, vol, roll) {
+    const c = A.ctx;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(roll ? 150 : 128, t); o.frequency.exponentialRampToValueAtTime(78, t + 0.18);
+    const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + (roll ? 0.12 : 0.3));
+    o.connect(g); g.connect(A.music); o.start(t); o.stop(t + 0.35);
+    const n = c.createBufferSource(); n.buffer = A.noise;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 0.8;
+    const ng = c.createGain(); ng.gain.setValueAtTime(vol * 0.55, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    n.connect(bp); bp.connect(ng); ng.connect(A.music); n.start(t, Math.random()); n.stop(t + 0.12);
+  }
+
+  /* --- Seqüenciador del toc --- */
+  const S = { list: null, li: 0, ni: 0, loopFrom: 0, nextT: 0, on: false, beatT: 0, drum: 'march', bar: 0 };
+  function play(list, loopFrom, drum) {
+    if (!A.ready) return;
+    S.list = list; S.li = 0; S.ni = 0; S.loopFrom = loopFrom; S.on = true; S.drum = drum || 'march';
+    const now = A.ctx.currentTime + 0.04;
+    if (S.nextT < now) { S.nextT = now; S.beatT = now; }
+  }
+  function sched() {
+    if (!S.on || !A.ready) return;
+    const c = A.ctx, horizon = c.currentTime + 0.18;
+    while (S.nextT < horizon) {
+      const name = S.list[S.li], ph = PH[name];
+      if (S.ni >= ph.length) {
+        S.ni = 0; S.li++;
+        if (S.li >= S.list.length) { if (S.loopFrom >= 0) S.li = S.loopFrom; else { S.on = false; endDrums(S.nextT); return; } }
+        continue;
+      }
+      const [semi, beats, orn] = ph[S.ni++];
+      const dur = beats * (name === 'trino' ? 1 : BEAT), t = S.nextT;
+      const v = name === 'trino' ? 0.13 : 0.16;
+      gralla(t, semi, dur * 0.97, v, -7, orn === 'g');
+      gralla(t + 0.008, semi, dur * 0.95, v * 0.8, 6, false);
+      if (SEGONA.has(name) && name !== 'trino') {
+        const third = THIRD[((semi % 12) + 12) % 12];
+        if (third !== undefined) gralla(t + 0.004, semi + third, dur * 0.95, v * 0.55, 2, false);
+      }
+      S.nextT += dur;
+    }
+    // Timbal en paral·lel al pols
+    while (S.beatT < horizon) {
+      const t = S.beatT;
+      if (S.drum === 'roll') { timbal(t, 0.28, true); S.beatT += BEAT / 4; }
+      else if (S.drum === 'march') {
+        S.bar = (S.bar + 1) % 4;
+        timbal(t, S.bar === 0 ? 0.62 : 0.38);
+        if (S.bar === 3) timbal(t + BEAT / 2, 0.3);
+        S.beatT += BEAT;
+      } else { S.beatT += BEAT; }
+    }
+  }
+  function endDrums(t) { if (!A.ready) return; timbal(t, 0.7); timbal(t + 0.12, 0.5); }
+
+  const toc = {
+    inici: () => play(['inici', 'pujA', 'pujB'], 1, 'march'),
+    trino: () => { if (!A.ready) return; play(['trino'], 0, 'roll'); S.nextT = A.ctx.currentTime + 0.03; S.beatT = S.nextT; },
+    aleta: () => { if (!A.ready) return; play(['aleta'], -1, 'none'); S.nextT = A.ctx.currentTime + 0.02; S.beatT = S.nextT; },
+    baixada: () => play(['baixIni', 'baix'], 1, 'march'),
+    sortida: () => { if (!A.ready) return; play(['sortida'], -1, 'march'); },
+    stop: () => { S.on = false; }
+  };
+
+  /* --- La plaça: murmuri, silenci tens, ovació i ensurt --- */
+  function setupCrowd() {
+    const c = A.ctx;
+    const s = c.createBufferSource(); s.buffer = A.brown; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 420; f.Q.value = 0.6;
+    const g = c.createGain(); g.gain.value = 0;
+    s.connect(f); f.connect(g); g.connect(A.sfx); s.start();
+    A.crowd = g; A.crowdF = f;
+  }
+  function murmur(level, secs = 1.2) {
+    if (!A.ready) return; const t = A.ctx.currentTime;
+    A.crowd.gain.cancelScheduledValues(t); A.crowd.gain.setTargetAtTime(level * 0.5, t, secs / 3);
+  }
+  function cheer(len = 3.5, big = 1) {
+    if (!A.ready) return; const c = A.ctx, t0 = c.currentTime;
+    for (let i = 0; i < 260 * big; i++) { // aplaudiments
+      const t = t0 + Math.pow(Math.random(), 1.4) * len;
+      const n = c.createBufferSource(); n.buffer = A.noise;
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400 + Math.random() * 2600; bp.Q.value = 1.2;
+      const g = c.createGain(); g.gain.setValueAtTime(0.06 + Math.random() * 0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+      n.connect(bp); bp.connect(g); g.connect(A.sfx); n.start(t, Math.random()); n.stop(t + 0.05);
+    }
+    A.crowd.gain.cancelScheduledValues(t0);
+    A.crowd.gain.setValueAtTime(A.crowd.gain.value, t0);
+    A.crowd.gain.linearRampToValueAtTime(0.75 * big, t0 + 0.35); A.crowd.gain.setTargetAtTime(0.18, t0 + len * 0.7, 0.8);
+    A.crowdF.frequency.setValueAtTime(900, t0); A.crowdF.frequency.setTargetAtTime(420, t0 + len * 0.6, 0.6);
+  }
+  function ohh() {
+    if (!A.ready) return; const c = A.ctx, t0 = c.currentTime;
+    const s = c.createBufferSource(); s.buffer = A.brown; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 3;
+    f.frequency.setValueAtTime(620, t0); f.frequency.exponentialRampToValueAtTime(240, t0 + 1.9);
+    const g = c.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(1.2, t0 + 0.12); g.gain.linearRampToValueAtTime(0, t0 + 2.2);
+    s.connect(f); f.connect(g); g.connect(A.sfx); s.start(t0); s.stop(t0 + 2.3);
+    for (let i = 0; i < 6; i++) thud(t0 + 0.35 + i * 0.09 + Math.random() * 0.08, 0.5);
+  }
+  function thud(t, v) {
+    const c = A.ctx, o = c.createOscillator(); o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+    const g = c.createGain(); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(g); g.connect(A.sfx); o.start(t); o.stop(t + 0.3);
+  }
+  function seat(v = 0.18) { if (A.ready) thud(A.ctx.currentTime, v); }
+  function click() {
+    if (!A.ready) return; const c = A.ctx, t = c.currentTime, o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = 880;
+    const g = c.createGain(); g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+    o.connect(g); g.connect(A.sfx); o.start(t); o.stop(t + 0.08);
+  }
+  function suspend() { if (A.ctx && A.ctx.state === 'running') A.ctx.suspend(); }
+  function resume() { if (A.ctx && A.ctx.state === 'suspended') A.ctx.resume(); }
+
+  CS.audio = { init, setVolumes, toc, murmur, cheer, ohh, seat, click, suspend, resume, get ready() { return A.ready; } };
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — control per inclinació del mòbil.
+   Es calcula el vector "amunt" del món en coordenades del dispositiu a partir de beta/gamma
+   (continu, sense salts de gimbal), es gira segons l'orientació de pantalla i es compara
+   amb la postura calibrada. Resultat: x (dreta) i y (endavant) entre -1 i 1. */
+(function (CS) {
+  'use strict';
+  const D2R = Math.PI / 180;
+  const T = {
+    status: 'unknown',        // unknown | granted | denied | unsupported
+    hasData: false,
+    u: { x: 0, y: 0, z: 1 },  // vector amunt (filtrat) en coordenades de pantalla
+    zero: null,               // postura neutra
+    out: { x: 0, y: 0 },      // entrada processada
+    sens: 14,                 // graus per a força màxima
+    invert: false,
+    keys: { x: 0, y: 0 },
+    calib: null               // { t, n, sx, sy, sz, done }
+  };
+  let raw = null, lastEvt = 0;
+
+  function screenAngle() {
+    const a = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle
+      : (typeof window.orientation === 'number' ? window.orientation : 0);
+    return ((a % 360) + 360) % 360;
+  }
+  function onOri(e) {
+    if (e.beta == null || e.gamma == null) return;
+    const b = e.beta * D2R, g = e.gamma * D2R;
+    // amunt del món en coordenades del dispositiu
+    let x = -Math.cos(b) * Math.sin(g), y = Math.sin(b), z = Math.cos(b) * Math.cos(g);
+    const a = screenAngle() * D2R, ca = Math.cos(a), sa = Math.sin(a);
+    raw = { x: x * ca - y * sa, y: x * sa + y * ca, z };
+    if (!T.hasData) { T.u = Object.assign({}, raw); }
+    T.hasData = true; lastEvt = performance.now();
+  }
+
+  async function request() {
+    try {
+      if (typeof DeviceOrientationEvent === 'undefined') { T.status = 'unsupported'; return T.status; }
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const r = await DeviceOrientationEvent.requestPermission();
+        T.status = r === 'granted' ? 'granted' : 'denied';
+      } else T.status = 'granted';
+      if (T.status === 'granted') window.addEventListener('deviceorientation', onOri);
+    } catch (e) { T.status = 'denied'; }
+    return T.status;
+  }
+  // Espera dades reals del sensor (els ordinadors sovint no n'envien o envien null)
+  function waitData(ms = 1200) {
+    return new Promise(res => {
+      const t0 = performance.now();
+      (function chk() { if (T.hasData) return res(true); if (performance.now() - t0 > ms) return res(false); setTimeout(chk, 60); })();
+    });
+  }
+
+  function startCalib(secs = 0.8) { T.calib = { t: secs, n: 0, sx: 0, sy: 0, sz: 0 }; }
+  function angles(u) { return { roll: Math.asin(Math.max(-1, Math.min(1, u.x))), pitch: Math.atan2(u.y, u.z) }; }
+
+  function update(dt) {
+    // Filtre passa-baix (constant de temps ~60 ms): suau però àgil
+    if (raw) {
+      const k = 1 - Math.exp(-dt / 0.06);
+      T.u.x += (raw.x - T.u.x) * k; T.u.y += (raw.y - T.u.y) * k; T.u.z += (raw.z - T.u.z) * k;
+    }
+    if (T.calib) {
+      const c = T.calib; c.t -= dt; c.n++; c.sx += T.u.x; c.sy += T.u.y; c.sz += T.u.z;
+      if (c.t <= 0) { const n = c.n || 1; T.zero = angles({ x: c.sx / n, y: c.sy / n, z: c.sz / n }); T.calib = null; }
+    }
+    let x = 0, y = 0;
+    if (T.hasData && T.zero) {
+      const a = angles(T.u), s = T.sens * D2R;
+      x = -(a.roll - T.zero.roll) / s;     // inclinar a la dreta → empènyer a la dreta
+      y = -(a.pitch - T.zero.pitch) / s;   // inclinar la part de dalt lluny → empènyer endavant
+      x = shape(x); y = shape(y);
+      if (T.invert) { x = -x; y = -y; }
+    }
+    // Teclat: només per provar en ordinador, sense sensor
+    x += T.keys.x; y += T.keys.y;
+    const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+    T.out.x = x; T.out.y = y;
+  }
+  function shape(v) { // zona morta petita i corba suau
+    const dz = 0.06, s = Math.sign(v), a = Math.abs(v);
+    if (a < dz) return 0;
+    return s * Math.min(1, Math.pow((a - dz) / (1 - dz), 1.12));
+  }
+  const fresh = () => T.hasData && performance.now() - lastEvt < 1500;
+
+  // Teclat de prova
+  const keys = {};
+  addEventListener('keydown', e => { keys[e.key.toLowerCase()] = 1; kupd(); });
+  addEventListener('keyup', e => { keys[e.key.toLowerCase()] = 0; kupd(); });
+  function kupd() {
+    T.keys.x = (keys.arrowright || keys.d ? 1 : 0) - (keys.arrowleft || keys.a ? 1 : 0);
+    T.keys.y = (keys.arrowup || keys.w ? 1 : 0) - (keys.arrowdown || keys.s ? 1 : 0);
+  }
+
+  CS.tilt = Object.assign(T, { request, waitData, startCalib, update, fresh, get calibrating() { return !!T.calib; } });
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — la plaça: renderitzador, llum de tarda, façanes, banderoles, públic i càmera */
+(function (CS) {
+  'use strict';
+  const V3 = THREE.Vector3;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const P = CS.people;
+  const mobile = matchMedia('(pointer:coarse)').matches;
+  const PLAZA = 27;
+
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0xe9dcc6, 48, 130);
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 420);
+
+  // Llum de tarda: sol càlid i baix, cel suau
+  const hemi = new THREE.HemisphereLight(0xd6e4f2, 0xa88458, 0.72); scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffe2b8, 1.45);
+  sun.position.set(17, 21, 9); sun.castShadow = true;
+  Object.assign(sun.shadow.camera, { left: -13, right: 13, top: 19, bottom: -5, near: 1, far: 70 });
+  sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.025;
+  scene.add(sun); scene.add(sun.target);
+  const fill = new THREE.DirectionalLight(0xbcd2ff, 0.25); fill.position.set(-12, 8, -10); scene.add(fill);
+
+  function quality(q) {
+    const low = q === 'baixa';
+    renderer.setPixelRatio(Math.min(devicePixelRatio, low ? 1 : (mobile ? 1.75 : 2)));
+    const ms = low ? 1024 : (mobile ? 1536 : 2048);
+    if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    sun.shadow.mapSize.set(ms, ms);
+    renderer.shadowMap.type = low ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    renderer.shadowMap.needsUpdate = true;
+    World.quality = q;
+  }
+
+  // Cel amb degradat i halo del sol
+  (() => {
+    const g = new THREE.SphereGeometry(230, 32, 16);
+    const m = new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { top: { value: new THREE.Color('#4f87c2') }, mid: { value: new THREE.Color('#c5dbea') }, bot: { value: new THREE.Color('#f3dfbd') }, sdir: { value: sun.position.clone().normalize() } },
+      vertexShader: 'varying vec3 vp; void main(){ vp=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+      fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform vec3 sdir; varying vec3 vp; void main(){ vec3 d=normalize(vp); float h=d.y; vec3 c = h>0.0 ? mix(mid,top,smoothstep(0.0,0.55,h)) : mix(mid,bot,smoothstep(0.0,-0.2,h)); float s=max(dot(d,sdir),0.0); c += vec3(1.0,0.82,0.55)*pow(s,24.0)*0.55 + vec3(1.0,0.9,0.7)*pow(s,400.0); gl_FragColor=vec4(c,1.0);}'
+    });
+    scene.add(new THREE.Mesh(g, m));
+  })();
+
+  function tex(w, h, draw, rep) {
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const x = cv.getContext('2d'); draw(x, w, h);
+    const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
+    t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); }
+    return t;
+  }
+
+  // Empedrat de pedra
+  (() => {
+    const t = tex(512, 512, (x, w, h) => {
+      x.fillStyle = '#8f7c60'; x.fillRect(0, 0, w, h);
+      const rows = 8, rh = h / rows;
+      for (let r = 0; r < rows; r++) {
+        let cx = (r % 2) * -34;
+        while (cx < w) {
+          const bw = rand(52, 100), l = rand(-12, 9);
+          const gr = x.createLinearGradient(0, r * rh, 0, r * rh + rh);
+          gr.addColorStop(0, `hsl(${rand(30, 40)},${rand(20, 30)}%,${66 + l}%)`);
+          gr.addColorStop(1, `hsl(${rand(30, 40)},${rand(20, 30)}%,${58 + l}%)`);
+          x.fillStyle = gr; x.beginPath(); x.roundRect ? x.roundRect(cx + 2, r * rh + 2, bw - 4, rh - 4, 5) : x.rect(cx + 2, r * rh + 2, bw - 4, rh - 4); x.fill();
+          for (let i = 0; i < 18; i++) { x.fillStyle = `rgba(70,50,30,${rand(0.03, 0.1)})`; x.fillRect(cx + rand(3, bw - 8), r * rh + rand(3, rh - 8), rand(2, 7), rand(2, 5)); }
+          cx += bw;
+        }
+      }
+    }, 20);
+    const g = new THREE.Mesh(new THREE.PlaneGeometry(170, 170), new THREE.MeshLambertMaterial({ map: t }));
+    g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
+    // Desgast del lloc on es fan castells (ombra de contacte suau)
+    const wear = tex(256, 256, (x, w, h) => { const r = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, 'rgba(40,28,16,.42)'); r.addColorStop(0.55, 'rgba(40,28,16,.2)'); r.addColorStop(1, 'rgba(40,28,16,0)'); x.fillStyle = r; x.fillRect(0, 0, w, h); });
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshBasicMaterial({ map: wear, transparent: true, depthWrite: false }));
+    d.rotation.x = -Math.PI / 2; d.position.y = 0.012; scene.add(d);
+  })();
+
+  // Façanes amb balcons, persianes i porxos
+  const WALLS = ['#d8b98a', '#e6d1a8', '#c99a6b', '#e9dbc1', '#d0ae7c', '#bf8f63', '#e2c69b', '#d9b28a', '#cfa57a'];
+  function facade(wall, floors, cols, seed, ajuntament) {
+    return tex(256, 512, (x, w, h) => {
+      x.fillStyle = wall; x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 700; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? 60 : 255},${Math.random() < 0.5 ? 40 : 230},20,.03)`; x.fillRect(rand(0, w), rand(0, h), rand(1, 6), rand(1, 4)); }
+      const fh = h / (floors + 0.4);
+      const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(60,40,20,.18)'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+      x.fillStyle = 'rgba(0,0,0,.2)'; x.fillRect(0, 0, w, fh * 0.28);
+      x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, fh * 0.24, w, 6);
+      for (let f = 1; f < floors; f++) { x.fillStyle = 'rgba(0,0,0,.08)'; x.fillRect(0, h - f * fh - 3, w, 3); }
+      const cw = w / cols, shutter = ['#3f6b4f', '#6a4a30', '#46647a', '#7b3b2a'][seed % 4];
+      for (let f = 0; f < floors; f++) {
+        const y0 = h - (f + 1) * fh;
+        for (let c = 0; c < cols; c++) {
+          const cx = c * cw + cw * 0.5;
+          if (f === 0) {
+            x.fillStyle = '#2a221a'; x.beginPath(); x.moveTo(cx - cw * 0.34, h); x.lineTo(cx - cw * 0.34, y0 + fh * 0.48);
+            x.arc(cx, y0 + fh * 0.48, cw * 0.34, Math.PI, 0); x.lineTo(cx + cw * 0.34, h); x.fill();
+            x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 3; x.beginPath(); x.arc(cx, y0 + fh * 0.48, cw * 0.36, Math.PI, 0); x.stroke();
+            continue;
+          }
+          const ww = cw * 0.4, wh = fh * 0.66, wy = y0 + fh * 0.14;
+          x.fillStyle = 'rgba(255,255,255,.22)'; x.fillRect(cx - ww / 2 - 5, wy - 6, ww + 10, wh + 8);
+          x.fillStyle = '#1d1915'; x.fillRect(cx - ww / 2, wy, ww, wh);
+          x.fillStyle = 'rgba(160,190,210,.18)'; x.fillRect(cx - ww / 2 + 3, wy + 3, ww / 2 - 4, wh - 6);
+          x.fillStyle = shutter; x.fillRect(cx - ww / 2 - ww * 0.34, wy, ww * 0.32, wh); x.fillRect(cx + ww / 2 + ww * 0.02, wy, ww * 0.32, wh);
+          x.fillStyle = 'rgba(0,0,0,.25)'; for (let k = 0; k < 8; k++) { x.fillRect(cx - ww / 2 - ww * 0.34, wy + k * wh / 8, ww * 0.32, 1.5); x.fillRect(cx + ww / 2 + ww * 0.02, wy + k * wh / 8, ww * 0.32, 1.5); }
+        }
+      }
+      if (ajuntament) { // rellotge i escut
+        x.fillStyle = '#f2ead8'; x.beginPath(); x.arc(w / 2, fh * 0.75, 22, 0, Math.PI * 2); x.fill();
+        x.strokeStyle = '#2a221a'; x.lineWidth = 3; x.stroke();
+        x.beginPath(); x.moveTo(w / 2, fh * 0.75); x.lineTo(w / 2, fh * 0.75 - 14); x.moveTo(w / 2, fh * 0.75); x.lineTo(w / 2 + 10, fh * 0.75 + 4); x.stroke();
+      }
+    });
+  }
+  const senyera = tex(64, 128, (x, w, h) => { for (let i = 0; i < 9; i++) { x.fillStyle = i % 2 ? '#c8102e' : '#f4c20d'; x.fillRect(i * w / 9, 0, w / 9 + 1, h); } });
+  const buildings = [];
+  const balconies = [];
+  (() => {
+    let seed = 0;
+    for (let side = 0; side < 4; side++) {
+      const rot = side * Math.PI / 2, ax = new V3(0, 1, 0);
+      let u = -PLAZA - 6;
+      while (u < PLAZA + 6) {
+        const aj = side === 0 && u < -2 && u + 10 > 2 && !buildings.some(b => b.aj);
+        const wdt = aj ? 12 : rand(6.5, 10), hgt = aj ? 17 : rand(10.5, 17.5);
+        const floors = Math.max(3, Math.round(hgt / 3.2)), cols = Math.max(2, Math.round(wdt / 2.5));
+        const wall = aj ? '#e8d7b5' : WALLS[(seed++) % WALLS.length];
+        const front = new THREE.MeshLambertMaterial({ map: facade(wall, floors, cols, seed, aj) });
+        const plain = new THREE.MeshLambertMaterial({ color: new THREE.Color(wall).convertSRGBToLinear() });
+        const roof = new THREE.MeshLambertMaterial({ color: new THREE.Color('#a05a3a').convertSRGBToLinear() });
+        const b = new THREE.Mesh(new THREE.BoxGeometry(wdt, hgt, 9), [plain, plain, roof, plain, front, plain]);
+        const cx = u + wdt / 2, cz = -(PLAZA + 4.5);
+        b.position.copy(new V3(cx, hgt / 2, cz).applyAxisAngle(ax, rot)); b.rotation.y = rot; scene.add(b);
+        // cornisa
+        const corn = new THREE.Mesh(new THREE.BoxGeometry(wdt, 0.35, 0.6), plain);
+        corn.position.copy(new V3(cx, hgt - 0.2, cz + 4.7).applyAxisAngle(ax, rot)); corn.rotation.y = rot; scene.add(corn);
+        const fh = hgt / (floors + 0.4), cw = wdt / cols;
+        for (let f = 1; f < floors; f++) for (let c = 0; c < cols; c++) {
+          const bx = u + c * cw + cw / 2, by = f * fh + fh * 0.18 - 0.05;
+          balconies.push({ p: new V3(bx, by, cz + 4.5 + 0.35).applyAxisAngle(ax, rot), rot, w: cw * (aj && f === 1 ? 2.6 : 0.78), main: aj && f === 1 && c === Math.floor(cols / 2) });
+          if (Math.random() < 0.18 || (aj && f === 1)) { // senyeres als balcons
+            const sg = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.9), new THREE.MeshLambertMaterial({ map: senyera, side: THREE.DoubleSide }));
+            sg.position.copy(new V3(bx, by - 0.95, cz + 4.5 + 0.72).applyAxisAngle(ax, rot)); sg.rotation.y = rot; scene.add(sg);
+          }
+        }
+        buildings.push({ aj, u, wdt, hgt, rot });
+        u += wdt;
+      }
+    }
+    // Balcons: llosa + barana de ferro (instanciats)
+    const slabG = new THREE.BoxGeometry(1, 0.12, 0.7), railG = new THREE.BoxGeometry(1, 0.85, 0.04);
+    const slab = new THREE.InstancedMesh(slabG, new THREE.MeshLambertMaterial({ color: 0xcdbb9a }), balconies.length);
+    const rail = new THREE.InstancedMesh(railG, new THREE.MeshLambertMaterial({ color: 0x1b1b1b, transparent: true, opacity: 0.82 }), balconies.length);
+    const d = new THREE.Object3D();
+    balconies.forEach((b, i) => {
+      d.position.copy(b.p); d.rotation.set(0, b.rot, 0); d.scale.set(b.w, 1, 1); d.updateMatrix(); slab.setMatrixAt(i, d.matrix);
+      d.position.copy(b.p).add(new V3(0, 0.48, 0.33).applyAxisAngle(new V3(0, 1, 0), b.rot)); d.updateMatrix(); rail.setMatrixAt(i, d.matrix);
+    });
+    scene.add(slab, rail);
+    // Campanar
+    const st = new THREE.MeshLambertMaterial({ map: tex(128, 512, (x, w, h) => { x.fillStyle = '#cfae7d'; x.fillRect(0, 0, w, h); for (let i = 0; i < 320; i++) { x.fillStyle = 'rgba(60,40,20,.07)'; x.fillRect(rand(0, w), rand(0, h), rand(4, 16), 2); } x.fillStyle = '#2a2119'; x.beginPath(); x.moveTo(w * 0.3, h * 0.2); x.lineTo(w * 0.3, h * 0.1); x.arc(w * 0.5, h * 0.1, w * 0.2, Math.PI, 0); x.lineTo(w * 0.7, h * 0.2); x.fill(); }) });
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(5.5, 34, 5.5), st); tower.position.set(11, 17, -(PLAZA + 13)); scene.add(tower);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(4.2, 5.5, 4), new THREE.MeshLambertMaterial({ color: new THREE.Color('#8f5a3a').convertSRGBToLinear() }));
+    cap.position.set(11, 36.7, -(PLAZA + 13)); cap.rotation.y = Math.PI / 4; scene.add(cap);
+  })();
+
+  // Banderoles de festa major creuant la plaça
+  (() => {
+    const cols = ['#f4c20d', '#c8102e', '#f4f1ea', '#2f6fb8', '#2f8a3e'];
+    const tri = new THREE.BufferGeometry();
+    tri.setAttribute('position', new THREE.Float32BufferAttribute([-0.18, 0, 0, 0.18, 0, 0, 0, -0.42, 0], 3)); tri.computeVertexNormals();
+    const lines = [[new V3(-PLAZA, 14.5, -PLAZA), new V3(PLAZA, 15, PLAZA)], [new V3(PLAZA, 14, -PLAZA), new V3(-PLAZA, 14.5, PLAZA)], [new V3(-PLAZA, 13, 2), new V3(PLAZA, 13, -3)]];
+    const per = 70, im = new THREE.InstancedMesh(tri, new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), lines.length * per);
+    const d = new THREE.Object3D(); let i = 0; const col = new THREE.Color();
+    lines.forEach(([a, b]) => {
+      const dir = new V3().subVectors(b, a);
+      for (let k = 0; k < per; k++) {
+        const t = (k + 0.5) / per, p = a.clone().addScaledVector(dir, t); p.y -= Math.sin(t * Math.PI) * 2.6;
+        d.position.copy(p); d.rotation.set(0, Math.atan2(dir.x, dir.z) + Math.PI / 2, rand(-0.08, 0.08)); d.updateMatrix();
+        im.setMatrixAt(i, d.matrix); im.setColorAt(i, col.set(cols[k % cols.length]).convertSRGBToLinear()); i++;
+      }
+      const curve = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, k) => { const t = k / 11, p = a.clone().addScaledVector(dir, t); p.y -= Math.sin(t * Math.PI) * 2.6; return p; }));
+      scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 40, 0.015, 3), new THREE.MeshBasicMaterial({ color: 0x222222 })));
+    });
+    scene.add(im);
+  })();
+
+  // Públic: anells a peu de plaça i gent als balcons
+  let crowd = [];
+  function buildCrowd(q) {
+    crowd.forEach(m => { scene.remove(m); m.dispose && m.dispose(); }); crowd = [];
+    const shirts = ['#f1efe9', '#22385e', '#7b7f86', '#e5c84a', '#a33b3b', '#4f7a5a', '#d38a4a', '#5a6aa0'];
+    const per = q === 'baixa' ? 40 : (mobile ? 70 : 100);
+    const d = new THREE.Object3D();
+    shirts.forEach((s, i) => {
+      const g = P.geo(Object.assign({ shirt: s, pose: i % 3 === 2 ? 'cheer' : 'down', shoes: true }, P.look(i * 3 + 1)));
+      const im = new THREE.InstancedMesh(g, P.MAT, per);
+      for (let k = 0; k < per; k++) {
+        const r = rand(11, PLAZA - 2.5), a = rand(0, Math.PI * 2);
+        d.position.set(Math.sin(a) * r, 0, Math.cos(a) * r); d.rotation.set(0, a + Math.PI + rand(-0.5, 0.5), 0);
+        const sc = rand(0.88, 1.06); d.scale.set(sc, sc, sc); d.updateMatrix(); im.setMatrixAt(k, d.matrix);
+      }
+      scene.add(im); crowd.push(im);
+    });
+    // als balcons
+    const bal = balconies.filter(() => Math.random() < (q === 'baixa' ? 0.15 : 0.35));
+    const g = P.geo(Object.assign({ shirt: '#efe9dc', pose: 'down', shoes: true }, P.look(5)));
+    const im = new THREE.InstancedMesh(g, P.MAT, Math.max(1, bal.length));
+    bal.forEach((b, k) => { d.position.copy(b.p).add(new V3(0, 0.06, -0.05).applyAxisAngle(new V3(0, 1, 0), b.rot)); d.rotation.set(0, b.rot, 0); d.scale.setScalar(0.95); d.updateMatrix(); im.setMatrixAt(k, d.matrix); });
+    im.count = bal.length; scene.add(im); crowd.push(im);
+  }
+
+  /* --- Càmera cinematogràfica --- */
+  const cam = { theta: 0.7, phi: 0.3, dist: 18, ty: 4, drag: null, shake: 0, focus: null, focusT: 0, auto: 0.035 };
+  function updateCamera(dt, topY, extra) {
+    const tTy = Math.min(9.5, Math.max(2.4, topY * 0.52 + 0.8));
+    const tDist = Math.min(23, Math.max(9, 7.5 + topY * 0.98));
+    let ty = tTy, dist = tDist;
+    if (cam.focus && cam.focusT > 0) { // primer pla de l'enxaneta en fer l'aleta
+      cam.focusT -= dt; const k = Math.min(1, cam.focusT);
+      ty = tTy + (cam.focus.y - tTy) * 0.55 * k; dist = tDist - 4 * k;
+    }
+    cam.ty += (ty - cam.ty) * Math.min(1, dt * 1.6);
+    cam.dist += (dist - cam.dist) * Math.min(1, dt * 1.3);
+    if (!cam.drag) cam.theta += dt * cam.auto;
+    const cd = cam.dist * Math.cos(cam.phi);
+    camera.position.set(Math.sin(cam.theta) * cd, cam.ty + Math.sin(cam.phi) * cam.dist, Math.cos(cam.theta) * cd);
+    // lleuger moviment de càmera a mà
+    const t = performance.now() / 1000;
+    camera.position.x += Math.sin(t * 0.7) * 0.06; camera.position.y += Math.sin(t * 0.9) * 0.05;
+    if (cam.shake > 0) { cam.shake -= dt; const s = cam.shake * 0.3; camera.position.x += rand(-s, s); camera.position.y += rand(-s, s); }
+    camera.lookAt(0, cam.ty, 0);
+    sun.target.position.set(0, topY * 0.35, 0);
+  }
+  function resize() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 60 : 48; camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize);
+
+  // Arrossegar per girar la càmera (no interfereix: el control és la inclinació)
+  canvas.addEventListener('pointerdown', e => { cam.drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener('pointermove', e => {
+    if (!cam.drag || e.pointerId !== cam.drag.id) return;
+    cam.theta -= (e.clientX - cam.drag.x) * 0.006; cam.phi = Math.min(0.95, Math.max(0.05, cam.phi + (e.clientY - cam.drag.y) * 0.004));
+    cam.drag.x = e.clientX; cam.drag.y = e.clientY;
+  });
+  const up = e => { if (cam.drag && e.pointerId === cam.drag.id) cam.drag = null; };
+  canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+
+  const World = { renderer, scene, camera, cam, sun, mobile, PLAZA, quality: 'alta', setQuality(q) { quality(q); buildCrowd(q); }, updateCamera, resize, rand };
+  CS.world = World;
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — joc: construcció del castell, equilibri, fases, caiguda, puntuació i progrés */
+(function (CS) {
+  'use strict';
+  const V3 = THREE.Vector3;
+  const { scene, cam } = CS.world;
+  const P = CS.people, AU = CS.audio, TL = CS.tilt, D = CS.data;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  const randn = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+  /* ---------- Desament ---------- */
+  const DEF = { v: 2, colla: 'vilafranca', tutorial: false, temporada: {}, best: 0,
+    set: { sens: 14, invert: false, relax: false, music: 0.8, sfx: 0.8, vib: true, quality: 'alta' } };
+  let store;
+  try { store = JSON.parse(localStorage.getItem('castells3d.v2') || 'null'); } catch (e) { store = null; }
+  store = Object.assign({}, DEF, store || {}); store.set = Object.assign({}, DEF.set, store.set || {});
+  function save() { try { localStorage.setItem('castells3d.v2', JSON.stringify(store)); } catch (e) { /* sense emmagatzematge */ } }
+
+  /* ---------- Estat ---------- */
+  const G = { state: 'idle', mode: 'assaig', def: null, prm: null, colla: null, stepI: 0, wait: 0, T: 0, aleta: false, desm: false,
+    token: 0, results: [], ronda: 1, paused: false, timeScale: 1, slowT: 0, aPhase: 0, aMiss: 0, stats: null, demo: true, calibAt: -1 };
+  const bal = { x: 0, z: 0, vx: 0, vz: 0, gx: 0, gz: 0 };
+  const hist = []; // historial de la inclinació per propagar l'ona pis amunt
+  let C = null, topY = 2, acc = 0;
+  const vib = p => { if (store.set.vib) try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
+
+  /* ---------- Disposició del tronc ---------- */
+  function layout(n) {
+    const pts = [], subs = [];
+    const ring = (cnt, r, cx, cz, a0) => { const idx = []; for (let i = 0; i < cnt; i++) { const a = a0 + i * 2 * Math.PI / cnt; pts.push({ x: cx + Math.sin(a) * r, z: cz + Math.cos(a) * r, ry: a }); idx.push(pts.length - 1); } subs.push({ idx, cx, cz, size: cnt }); };
+    if (n === 1) { pts.push({ x: 0, z: 0, ry: 0 }); subs.push({ idx: [0], cx: 0, cz: 0, size: 1 }); }
+    else if (n === 2) { pts.push({ x: -0.27, z: 0, ry: Math.PI / 2 }, { x: 0.27, z: 0, ry: -Math.PI / 2 }); subs.push({ idx: [0, 1], cx: 0, cz: 0, size: 2 }); }
+    else if (n === 3) ring(3, 0.43, 0, 0, Math.PI);
+    else if (n === 4) ring(4, 0.5, 0, 0, Math.PI / 4);
+    else if (n === 5) { ring(3, 0.43, -0.28, 0, -Math.PI / 2); pts.push({ x: 0.42, z: 0.27, ry: Math.PI / 2 }, { x: 0.42, z: -0.27, ry: Math.PI / 2 }); subs.push({ idx: [3, 4], cx: 0.42, cz: 0, size: 2 }); }
+    else if (n === 7) { ring(4, 0.5, -0.45, 0, Math.PI / 4); ring(3, 0.43, 0.52, 0, Math.PI / 2); }
+    else if (n === 9) { for (let k = 0; k < 3; k++) { const a = k * 2 * Math.PI / 3; ring(3, 0.4, Math.sin(a) * 0.8, Math.cos(a) * 0.8, a); } }
+    return { pts, subs };
+  }
+
+  function shirtOf(colla) { return colla.stripes ? { shirt: colla.color, stripes: colla.stripes } : { shirt: colla.color }; }
+
+  function clear() {
+    if (!C) return;
+    scene.remove(C.group);
+    C.ims.forEach(im => im.dispose && im.dispose());
+    C = null;
+  }
+
+  function build(def, colla) {
+    clear();
+    const group = new THREE.Group(); scene.add(group);
+    const sh = shirtOf(colla);
+    const has = ch => def.flags.includes(ch);
+    const pom = def.n === 1 ? 1 : (def.n === 2 ? 2 : 3);
+    const tl = def.pisos - pom;
+    const lay = layout(def.n);
+    const rT0 = Math.max(0, ...lay.pts.map(p => Math.hypot(p.x, p.z)));
+    const ys = [], ss = []; let y = 0;
+    for (let L = 0; L < tl; L++) { const s = L === 0 ? 1.05 : Math.max(0.74, 1 - 0.032 * L); ys.push(y); ss.push(s); y += 1.43 * s; }
+    const yTop = y;
+    const all = []; let pi = 0;
+    const mk = (kind, x, yy, z, ry, s, pose, o = {}) => {
+      const lk = Object.assign({}, sh, P.look((pi++) % 12), { helmet: !!o.helmet, shoes: !!o.shoes });
+      if (o.helmet) { delete lk.moc; lk.helmetBand = colla.color; }
+      const m = { kind, base: new V3(x, yy, z), ry, s, sy: o.sy || 1, pose, look: lk, t: 0, dir: 0, placed: false, path: null, dur: 1, cur: null, debris: null,
+        mesh: new THREE.Mesh(P.geo(Object.assign({}, lk, { pose: 'climb' })), P.MAT) };
+      m.mesh.castShadow = true; m.mesh.visible = false; m.mesh.scale.set(s, s * m.sy, s); group.add(m.mesh); all.push(m); return m;
+    };
+    const pose0 = def.n === 1 ? 'pilar' : (def.n === 2 ? 'torre' : 'shoulders');
+    const tronc = [];
+    for (let L = 0; L < tl; L++) {
+      const k = L ? ss[L] : ss[L] * 1.05;
+      tronc.push(lay.pts.map(p => { const m = mk(L === 0 ? 'baix' : 'tronc', p.x * k, ys[L], p.z * k, def.n === 1 ? 0 : p.ry, ss[L], pose0); m.col = p; m.L = L; return m; }));
+    }
+    const agulla = [];
+    if (has('a')) {
+      const sb = lay.subs[0];
+      for (let L = 0; L < tl - 1; L++) agulla.push(mk(L === 0 ? 'baix' : 'agulla', sb.cx, ys[L], sb.cz, 0, Math.max(0.6, 0.86 - 0.03 * L), 'pilar', { helmet: L >= tl - 2 }));
+    }
+    const ringAt = (kind, L, r, step, s) => {
+      const cnt = Math.max(4, Math.round(2 * Math.PI * r / step)), a0 = rand(0, 1), arr = [];
+      for (let i = 0; i < cnt; i++) { const a = a0 + i * 2 * Math.PI / cnt; arr.push(mk(kind, Math.sin(a) * r, ys[L], Math.cos(a) * r, a + Math.PI, s, 'mans')); }
+      return arr;
+    };
+    const folre = has('f') ? ringAt('folre', 1, rT0 * ss[1] + 0.5, 0.5, 0.96) : [];
+    const manilles = has('m') ? ringAt('manilles', 2, rT0 * ss[2] + 0.46, 0.52, 0.88) : [];
+    const puntals = has('p') ? ringAt('puntals', 3, rT0 * ss[3] + 0.4, 0.6, 0.82) : [];
+    const dosos = [], acot = []; let enx;
+    if (def.n >= 3) {
+      lay.subs.forEach(sb => {
+        const sc = ss[tl - 1], cx = sb.cx * sc, cz = sb.cz * sc;
+        dosos.push(mk('dosos', cx - 0.16, yTop, cz, 0, 0.62, 'shoulders', { helmet: true }), mk('dosos', cx + 0.16, yTop, cz, Math.PI, 0.62, 'shoulders', { helmet: true }));
+        acot.push(mk('acotxador', cx, yTop + 1.43 * 0.62, cz, Math.PI / 2, 0.56, 'crouch', { helmet: true, sy: 0.6 }));
+      });
+      const last = acot[acot.length - 1].base;
+      enx = mk('enxaneta', last.x, last.y + 0.5, last.z, 0, 0.5, 'climb', { helmet: true });
+    } else if (def.n === 2) {
+      acot.push(mk('acotxador', 0, yTop, 0, Math.PI / 2, 0.58, 'crouch', { helmet: true, sy: 0.6 }));
+      enx = mk('enxaneta', 0, yTop + 0.52, 0, 0, 0.5, 'climb', { helmet: true });
+    } else enx = mk('enxaneta', 0, yTop, 0, 0, 0.5, 'climb', { helmet: true });
+
+    // Ordre real de pujada: segons, folre, terços, manilles, quarts, puntals…
+    const steps = [];
+    for (let L = 1; L < tl; L++) {
+      const mem = tronc[L].slice(); if (agulla[L]) mem.push(agulla[L]);
+      steps.push({ label: `Pugen els ${D.LVL[L] || 'pisos'}`, mem, lvl: L });
+      if (L === 1 && folre.length) steps.push({ label: 'Puja el folre', mem: folre });
+      if (L === 2 && manilles.length) steps.push({ label: 'Pugen les manilles', mem: manilles });
+      if (L === 3 && puntals.length) steps.push({ label: 'Pugen els puntals', mem: puntals });
+    }
+    if (dosos.length) steps.push({ label: 'Pugen els dosos', mem: dosos, pom: true });
+    if (acot.length) steps.push({ label: "Puja l'acotxador", mem: acot, pom: true });
+    steps.push({ label: "Puja l'enxaneta", mem: [enx], enx: true, pom: true });
+
+    // Pinya instanciada: primeres mans a l'interior, la resta empenyent
+    const r0 = rT0 * 1.05 + 0.52;
+    const K = clamp(def.pisos - 2 + (has('f') ? 1 : 0), 4, 9);
+    const pinyaR = r0 + (K - 1) * 0.5 + 0.3;
+    const civ = ['#f1efe9', '#24385c', '#8a8d92'];
+    const looks = [0, 1, 2, 3].map(i => Object.assign({}, sh, P.look(i * 5 + 2), { shoes: true }))
+      .concat(civ.map((c, i) => Object.assign({ shirt: c, shoes: true }, P.look(i * 4 + 1))));
+    const items = [];
+    for (let k = 0; k < K; k++) {
+      const r = r0 + k * 0.5, cnt = Math.floor(2 * Math.PI * r / 0.5), a0 = rand(0, 6.28);
+      for (let i = 0; i < cnt; i++) {
+        const a = a0 + i * 2 * Math.PI / cnt + rand(-0.04, 0.04), sa = rand(0, 6.28), sr = rand(pinyaR + 3, pinyaR + 9);
+        const li = Math.random() < 0.8 ? (i % 4) : 4 + Math.floor(Math.random() * 3);
+        items.push({ li, pose: k < 2 ? 'mans' : 'pinya', k, to: new V3(Math.sin(a) * r, 0, Math.cos(a) * r), from: new V3(Math.sin(sa) * sr, 0, Math.cos(sa) * sr),
+          ry: a + Math.PI, rx: 0.08 + k * 0.016, s: rand(0.93, 1.05), delay: k * 0.13 + rand(0, 0.35), ph: rand(0, 6.28) });
+      }
+    }
+    const groups = new Map();
+    items.forEach(it => { const key = it.li + '|' + it.pose; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(it); });
+    const ims = [];
+    groups.forEach((arr, key) => {
+      const [li, pose] = key.split('|');
+      const lk = looks[+li];
+      const im = new THREE.InstancedMesh(P.geo(Object.assign({}, lk, { pose })), P.MAT, arr.length);
+      im.castShadow = true; im.receiveShadow = false; im.userData.look = lk; im.userData.pose = pose; im.frustumCulled = false;
+      arr.forEach((it, i) => { it.im = im; it.i = i; });
+      group.add(im); ims.push(im);
+    });
+    // Grallers i timbaler
+    const ga = Math.PI * 0.8;
+    for (let i = 0; i < 6; i++) {
+      const a = ga + (i - 2.5) * 0.12, r = pinyaR + 1.5;
+      const m = new THREE.Mesh(P.geo(Object.assign({}, sh, P.look(i + 11), { shoes: true, pose: i === 5 ? 'tabal' : 'gralla' })), P.MAT);
+      m.position.set(Math.sin(a) * r, 0, Math.cos(a) * r); m.rotation.y = a + Math.PI; m.castShadow = true; group.add(m);
+    }
+    C = { def, colla, group, steps, all, enx, yTop, fullH: yTop + 1.6, pinyaR, items, ims, rT0, lay, ys, ss, tl };
+    return C;
+  }
+
+  function setPose(m, pose) { if (m.cur !== pose) { m.mesh.geometry = P.geo(Object.assign({}, m.look, { pose })); m.cur = pose; } }
+  function pinyaPose(pose) { C.ims.forEach(im => { im.geometry = P.geo(Object.assign({}, im.userData.look, { pose: pose || im.userData.pose })); }); }
+
+  const dummy = new THREE.Object3D();
+  function updatePinya(T, formT) {
+    let done = true;
+    const lx = bal.x * 0.09, lz = bal.z * 0.09, cheer = G.state === 'done' && G.lastRes === 'D';
+    for (const it of C.items) {
+      const k = clamp((formT - it.delay) / 1.0, 0, 1); if (k < 1) done = false;
+      const e = ease(k);
+      dummy.position.lerpVectors(it.from, it.to, e);
+      dummy.position.y = Math.abs(Math.sin(e * Math.PI * 5)) * 0.06 * (1 - e);
+      if (e >= 1) {
+        const inner = Math.max(0, 1 - it.k / 4);
+        dummy.position.x += lx * inner; dummy.position.z += lz * inner; // la pinya absorbeix la inclinació
+        dummy.position.y += Math.sin(T * 1.7 + it.ph) * 0.008;
+        if (cheer) dummy.position.y += Math.abs(Math.sin(T * 7 + it.ph)) * 0.12;
+      }
+      dummy.rotation.set(it.rx * e, it.ry, 0, 'YXZ');
+      dummy.scale.setScalar(it.s); dummy.updateMatrix(); it.im.setMatrixAt(it.i, dummy.matrix);
+    }
+    C.ims.forEach(im => (im.instanceMatrix.needsUpdate = true));
+    return done;
+  }
+
+  /* ---------- Trajectòries ---------- */
+  /* Els castellers no salten al seu lloc: s'apropen caminant, s'enfilen per l'esquena de la pinya,
+     la travessen per sobre les espatlles i pugen pel tronc trepitjant la faixa i les espatlles
+     de cada pis de la seva columna, abraçats a l'estructura. */
+  const RING = { folre: 1, manilles: 1, puntals: 1 };
+  function makePath(m) {
+    const b = m.base, R = C.pinyaR, ys = C.ys, ss = C.ss;
+    let pt = m.col;
+    if (!pt) { let bd = 1e9; for (const p of C.lay.pts) { const d = (p.x * 0.9 - b.x) ** 2 + (p.z * 0.9 - b.z) ** 2; if (d < bd) { bd = d; pt = p; } } }
+    let ox = pt.x, oz = pt.z, ol = Math.hypot(ox, oz);
+    if (RING[m.kind]) { const d = Math.hypot(b.x, b.z) || 1; ox = b.x / d; oz = b.z / d; }
+    else if (ol < 0.05) { if (m.ang === undefined) m.ang = rand(0, 6.28); ox = Math.sin(m.ang); oz = Math.cos(m.ang); }
+    else { ox /= ol; oz /= ol; }
+    m.ax = ox; m.az = oz;
+    const kid = m.s < 0.7;
+    const stepT = kid ? 0.2 : 0.3 + 0.015 * (m.L || 0);
+    const pts = [], dts = [], kinds = [];
+    const add = (x, y, z, dt, k) => { pts.push(new V3(x, y, z)); dts.push(dt); kinds.push(k); };
+    const colAt = (L) => { const k = L ? ss[L] : ss[0] * 1.05; return { x: pt.x * k, z: pt.z * k }; };
+    // 1. caminar fins a la pinya
+    add(ox * (R + 1.5), 0, oz * (R + 1.5), 0, 'walk');
+    add(ox * (R + 0.35), 0, oz * (R + 0.35), 0.75, 'walk');
+    // 2. enfilar-se per l'esquena de la pinya
+    add(ox * (R - 0.1), 0.95, oz * (R - 0.1), 0.42, 'climb');
+    add(ox * (R - 0.55), 1.4, oz * (R - 0.55), 0.38, 'climb');
+    // 3. travessar la pinya per sobre les espatlles fins a la columna
+    let rIn;
+    if (RING[m.kind]) rIn = Math.hypot(b.x, b.z) + 0.34;
+    else { const c1 = colAt(1); rIn = Math.hypot(c1.x, c1.z) + 0.36 * ss[1]; }
+    const cross = Math.max(0, (R - 0.55) - rIn), nCross = Math.max(1, Math.round(cross / 0.8));
+    for (let k = 1; k <= nCross; k++) {
+      const r = (R - 0.55) - cross * k / nCross;
+      const cx = RING[m.kind] || ol < 0.05 ? ox * r : colAt(1).x + ox * 0.36 * ss[1] + ox * (r - rIn);
+      const cz = RING[m.kind] || ol < 0.05 ? oz * r : colAt(1).z + oz * 0.36 * ss[1] + oz * (r - rIn);
+      add(cx, 1.45, cz, 0.33, 'climb');
+    }
+    let cy = 1.45;
+    // 4. pujar pis a pis: faixa i espatlles de cada casteller de sota
+    if (RING[m.kind]) {
+      const rb = Math.hypot(b.x, b.z) + 0.32;
+      for (let j = 1; j < C.tl - 1 && ys[j + 1] <= b.y + 0.01; j++) {
+        add(ox * rb, ys[j] + 0.85 * ss[j], oz * rb, stepT, 'climb');
+        add(ox * rb, ys[j + 1], oz * rb, stepT, 'climb'); cy = ys[j + 1];
+      }
+    } else {
+      for (let j = 1; j < C.tl && ys[j] + 1.43 * ss[j] <= b.y + 0.05; j++) {
+        const c = colAt(j), off = 0.36 * ss[j];
+        add(c.x + ox * off, ys[j] + 0.88 * ss[j], c.z + oz * off, stepT, 'climb');
+        const c2 = j + 1 < C.tl ? colAt(j + 1) : c;
+        add(c2.x + ox * off, ys[j] + 1.43 * ss[j], c2.z + oz * off, stepT, 'climb'); cy = ys[j] + 1.43 * ss[j];
+      }
+    }
+    // 5. pom de dalt: dosos i acotxador fan d'esglaó a la canalla
+    while (b.y - cy > 0.55) {
+      const ny = Math.min(b.y, cy + 0.45);
+      add(b.x + ox * 0.28, ny, b.z + oz * 0.28, stepT, 'climb'); cy = ny;
+    }
+    // 6. col·locar-se i redreçar-se
+    add(b.x + ox * 0.18, b.y + 0.08, b.z + oz * 0.18, stepT, 'climb');
+    add(b.x, b.y, b.z, stepT * 1.2, 'settle');
+    const cum = [0]; for (let k = 1; k < dts.length; k++) cum.push(cum[k - 1] + dts[k]);
+    m.path = { pts, dts, kinds, cum }; m.dur = cum[cum.length - 1];
+  }
+  const _a = new V3();
+  // Posició i postura al llarg del camí (t entre 0 i 1)
+  function pathAt(m, t, out) {
+    const P_ = m.path, tau = t * m.dur;
+    let i = 1; while (i < P_.cum.length - 1 && P_.cum[i] < tau) i++;
+    const u = clamp((tau - P_.cum[i - 1]) / (P_.dts[i] || 1), 0, 1), k = P_.kinds[i];
+    const e = k === 'walk' ? u : u * u * (3 - 2 * u); // agafar-se, empènyer, fer pas
+    out.lerpVectors(P_.pts[i - 1], P_.pts[i], e);
+    if (k === 'walk') out.y += Math.abs(Math.sin(u * Math.PI)) * 0.04;
+    else if (k === 'climb') { const bulge = Math.sin(u * Math.PI) * 0.07; out.x += m.ax * bulge; out.z += m.az * bulge; }
+    return k === 'walk' ? (u < 0.5 ? 'walkA' : 'walkB') : k === 'climb' ? (i % 2 ? 'climbL' : 'climbR') : 'climb';
+  }
+
+  /* ---------- Desenvolupament del castell ---------- */
+  function start(def, colla, mode) {
+    G.def = def; G.prm = D.params(def); G.colla = colla; G.mode = mode || G.mode;
+    G.token++; G.state = 'pinya'; G.T = 0; G.stepI = 0; G.wait = 0; G.aleta = false; G.desm = false; G.demo = false; G.paused = false;
+    G.timeScale = 1; G.slowT = 0; G.calibAt = 1.3; G.lastRes = null;
+    G.stats = { maxLean: 0, perfect: false, t0: 0 };
+    Object.assign(bal, { x: 0, z: 0, vx: 0, vz: 0, gx: 0, gz: 0 }); hist.length = 0; topY = 2; acc = 0;
+    build(def, colla);
+    C.all.filter(m => m.kind === 'baix').forEach(m => { m.placed = true; m.t = 1; m.mesh.visible = true; makePath(m); setPose(m, m.pose); });
+    cam.theta = rand(0, 6.28); cam.auto = 0.03;
+    AU.murmur(0.55);
+    CS.ui.onStart();
+  }
+  function beginStep(i) {
+    const st = C.steps[i]; CS.ui.msg(st.label); CS.ui.progress();
+    const stg = st.mem.length > 6 ? 0.07 : 0.22;
+    st.mem.forEach((m, j) => { makePath(m); m.t = 0; m.wait = j * stg; m.dir = 1; m.mesh.visible = true; setPose(m, 'walkA'); });
+    if (st.lvl === 2 || (C.steps.length && i === 0 && !C.steps.some(s => s.lvl === 2))) { AU.toc.inici(); AU.murmur(0.25); } // el toc comença amb els terços
+    if (st.enx) { AU.toc.trino(); CS.ui.desmuntar(false); AU.murmur(0.12); }
+  }
+  function kick(mag) { const a = rand(0, 6.28), k = mag * (store.set.relax ? 0.65 : 1); bal.vx += Math.sin(a) * k; bal.vz += Math.cos(a) * k; }
+
+  function startDescent() {
+    const list = [];
+    for (let i = Math.min(G.stepI, C.steps.length - 1); i >= 0; i--) {
+      const mem = C.steps[i].mem.filter(m => m.mesh.visible);
+      if (mem.length) list.push({ label: C.steps[i].label.replace('Pugen', 'Baixen').replace('Puja', 'Baixa'), mem });
+    }
+    G.desc = list; G.descI = 0; G.state = 'descend'; startDescStep();
+    if (G.aleta) AU.toc.baixada(); else AU.toc.stop();
+  }
+  function startDescStep() {
+    const st = G.desc[G.descI]; if (!st) return;
+    CS.ui.msg(st.label);
+    st.mem.forEach((m, j) => { if (!m.path) makePath(m); m.dir = -1; m.wait = m.t >= 1 ? j * 0.08 : 0; m.placed = false; setPose(m, 'climbL'); });
+  }
+  function desmuntar() { if (G.state === 'climb') { G.desm = true; CS.ui.desmuntar(false); startDescent(); CS.ui.msg('Desmuntant amb ordre'); } }
+
+  function tapAleta() {
+    if (G.state !== 'aleta' || G.paused) return;
+    const c = 0.85, w = G.prm.aWin * (store.set.relax ? 1.35 : 1), dd = Math.abs(G.aPhase - c);
+    if (dd <= w / 2) {
+      G.aleta = true; G.state = 'carregat'; G.wait = 1.8; setPose(C.enx, 'aleta');
+      G.stats.perfect = dd <= w / 4;
+      CS.ui.aleta(false); CS.ui.msg('Carregat! Ara cal descarregar-lo');
+      CS.ui.stamp('Carregat', '#f4c20d', G.stats.perfect ? 'aleta perfecta' : 'queda descarregar-lo');
+      AU.toc.aleta(); AU.cheer(2.6, 0.8); vib(40);
+      cam.focus = C.enx.mesh.position.clone(); cam.focusT = 1.6;
+    } else {
+      const early = G.aPhase < c;
+      kick(0.35 * (0.6 + G.prm.k * 0.4)); G.aMiss++; G.aPhase = 0; vib(15);
+      CS.ui.msg(early ? "Massa aviat: espera que l'anell toqui l'enxaneta" : "Massa tard: torna-hi quan l'anell es tanqui");
+    }
+  }
+
+  function fall() {
+    G.state = 'fall'; G.fallT = 0; AU.toc.stop(); AU.ohh(); vib([70, 40, 110]);
+    CS.ui.aleta(false); CS.ui.desmuntar(false);
+    const len = Math.hypot(bal.x, bal.z) || 1, dx = bal.x / len, dz = bal.z / len;
+    C.all.forEach(m => {
+      if (!m.mesh.visible || m.kind === 'baix') return;
+      const h = m.mesh.position.y; if (h < 0.5) return;
+      const f = m.kind === 'folre' ? 0.35 : (m.kind === 'manilles' ? 0.6 : 1);
+      m.debris = { v: new V3(dx * (0.7 + h * 0.3) * f + rand(-0.8, 0.8), rand(0.3, 1.8), dz * (0.7 + h * 0.3) * f + rand(-0.8, 0.8)),
+        w: new V3(rand(-3, 3), rand(-2, 2), rand(-3, 3)).multiplyScalar(0.6 + h * 0.05), delay: Math.max(0, (C.fullH - h) * 0.03), rest: false };
+    });
+    cam.shake = 0.7; G.slowT = 0.9;
+    const tk = G.token, res = G.aleta ? 'C' : 'i';
+    setTimeout(() => { if (tk === G.token) CS.ui.stamp(G.aleta ? 'Carregat' : 'Intent', G.aleta ? '#f4c20d' : '#ff6b6b', G.aleta ? "l'enxaneta havia fet l'aleta" : 'el castell ha fet llenya'); }, 800);
+    setTimeout(() => { if (tk === G.token) endRound(res); }, 3800);
+  }
+
+  function endRound(res) {
+    G.state = 'idle'; G.lastRes = res;
+    const r = { id: G.def.id, res, stars: 0, maxLean: G.stats.maxLean, perfect: G.stats.perfect };
+    if (res === 'D') r.stars = 1 + (G.stats.maxLean < 0.72 ? 1 : 0) + (G.stats.maxLean < 0.55 && G.stats.perfect ? 1 : 0);
+    if (G.mode === 'concurs') G.results.push(r);
+    if (G.mode === 'temporada' && res === 'D') { store.temporada[r.id] = Math.max(store.temporada[r.id] || 0, r.stars); save(); }
+    CS.ui.roundEnd(r);
+  }
+
+  /* Puntuació del Concurs 2026: tres millors castells d'estructura diferent, com a màxim dos només carregats */
+  function score(results) {
+    const best = {};
+    results.forEach(r => {
+      if (r.res !== 'D' && r.res !== 'C') return;
+      const d = D.byId(r.id); if (d.fora) return;
+      const pts = r.res === 'D' ? d.D : d.C;
+      if (!best[r.id] || pts > best[r.id].pts) best[r.id] = { id: r.id, res: r.res, pts };
+    });
+    const cand = Object.values(best).sort((a, b) => b.pts - a.pts), chosen = []; let nc = 0;
+    for (const v of cand) { if (chosen.length >= 3) break; if (v.res === 'C') { if (nc >= 2) continue; nc++; } chosen.push(v); }
+    return { total: chosen.reduce((s, v) => s + v.pts, 0), chosen };
+  }
+  const notation = r => (r.res === 'i' ? 'i' : r.res === 'id' ? 'id' : '') + r.id + (r.res === 'C' ? 'C' : '');
+
+  /* ---------- Física de l'equilibri (pas fix de 1/120 s) ---------- */
+  function physics(h) {
+    const p = G.prm, relax = store.set.relax ? 0.62 : 1;
+    const hf = clamp(topY / C.fullH, 0.1, 1);
+    const extra = G.state === 'aleta' ? 1.25 : 1; // l'enxaneta encavalcant fa tremolar el pom
+    const k = p.k * (0.3 + 0.7 * hf) * relax, sg = p.gust * (0.25 + 0.75 * hf) * relax * extra;
+    const th = 1.5;
+    bal.gx += -bal.gx * th * h + sg * Math.sqrt(2 * th * h) * randn() * 1.5;
+    bal.gz += -bal.gz * th * h + sg * Math.sqrt(2 * th * h) * randn() * 1.5;
+    // entrada de la inclinació en l'espai de la càmera
+    const ix = TL.out.x, iy = TL.out.y;
+    const fx = -Math.sin(cam.theta), fz = -Math.cos(cam.theta), rx = Math.cos(cam.theta), rz = -Math.sin(cam.theta);
+    const PW = 2.6, ux = (rx * ix + fx * iy) * PW, uz = (rz * ix + fz * iy) * PW;
+    const as = p.assist * relax;
+    bal.vx += (k * bal.x + bal.gx + ux - 1.9 * bal.vx - as * bal.x) * h;
+    bal.vz += (k * bal.z + bal.gz + uz - 1.9 * bal.vz - as * bal.z) * h;
+    bal.x += bal.vx * h; bal.z += bal.vz * h;
+    const l = Math.hypot(bal.x, bal.z);
+    G.stats.maxLean = Math.max(G.stats.maxLean, l);
+    if (l > 1) fall();
+  }
+  function leanAt(delay) {
+    if (!hist.length || delay <= 0) return bal;
+    const t = G.T - delay;
+    for (let i = hist.length - 1; i > 0; i--) if (hist[i - 1].t <= t) { const a = hist[i - 1], b = hist[i], k = (t - a.t) / ((b.t - a.t) || 1); return { x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k }; }
+    return hist[0];
+  }
+  function sway(y) { const H = Math.max(topY, 3); return Math.pow(clamp(y / H, 0, 1.2), 1.6) * (0.55 + H * 0.03); }
+
+  /* ---------- Bucle ---------- */
+  const tmp = new V3(), qT = new THREE.Quaternion(), qY = new THREE.Quaternion(), qL = new THREE.Quaternion(), eul = new THREE.Euler(), UPY = new V3(0, 1, 0), AXX = new V3(1, 0, 0);
+  function update(rdt) {
+    if (G.paused) return;
+    if (G.slowT > 0) { G.slowT -= rdt; G.timeScale = 0.45; } else G.timeScale = 1;
+    const dt = rdt * G.timeScale;
+    G.T += dt;
+    if (!C) return;
+
+    // Pinya i calibratge
+    if (G.state === 'pinya') {
+      if (G.calibAt > 0 && G.T >= G.calibAt) { G.calibAt = -1; TL.startCalib(0.9); }
+      const done = updatePinya(G.T, G.T);
+      if (done && G.T > 2.5 && !TL.calibrating) { G.state = 'climb'; G.stepI = 0; beginStep(0); CS.ui.desmuntar(true); }
+    } else updatePinya(G.T, 99);
+
+    // Física amb pas fix
+    const active = G.state === 'climb' || G.state === 'aleta' || G.state === 'carregat' || G.state === 'descend';
+    if (active) {
+      acc += dt; let n = 0;
+      while (acc >= 1 / 120 && n < 12) { physics(1 / 120); acc -= 1 / 120; n++; if (G.state === 'fall') break; }
+    } else if (G.state !== 'fall') {
+      bal.x *= 0.94; bal.z *= 0.94; bal.vx = bal.vz = 0;
+      if (G.demo) { bal.x = Math.sin(G.T * 0.7) * 0.05; bal.z = Math.cos(G.T * 0.53) * 0.04; }
+    }
+    hist.push({ t: G.T, x: bal.x, z: bal.z }); while (hist.length > 90) hist.shift();
+
+    // Castellers
+    let ty = 1.8;
+    for (const m of C.all) {
+      if (!m.mesh.visible) continue;
+      if (m.debris) { stepDebris(m, dt); continue; }
+      if (m.wait > 0) m.wait -= dt;
+      else if (m.dir === 1 && m.t < 1) {
+        m.t += dt / m.dur;
+        if (m.t >= 1) { m.t = 1; m.placed = true; m.dir = 0; setPose(m, m.pose); if (m.kind !== 'enxaneta') { kick(G.prm.seat); AU.seat(0.12); } }
+      } else if (m.dir === -1) { m.t -= dt * 1.25 / m.dur; if (m.t <= 0) { m.t = 0; m.dir = 0; m.mesh.visible = false; continue; } }
+      const tt = clamp(m.t, 0, 1);
+      let lean = 0;
+      if (tt >= 1 || !m.path) tmp.copy(m.base);
+      else { const ps = pathAt(m, tt, tmp); setPose(m, ps); lean = ps === 'climbL' || ps === 'climbR' ? 0.24 : 0; }
+      const ln = leanAt(tmp.y * 0.022), sw = sway(tmp.y);
+      const jit = Math.pow(Math.hypot(bal.x, bal.z), 3) * 0.035 * (tmp.y > 1 ? 1 : 0);
+      m.mesh.position.set(tmp.x + ln.x * sw + rand(-jit, jit), tmp.y, tmp.z + ln.z * sw + rand(-jit, jit));
+      const climbing = tt < 1 && m.path;
+      qY.setFromAxisAngle(UPY, climbing ? Math.atan2(m.ax, m.az) + Math.PI : m.ry);
+      const tk = 0.17 * clamp(tmp.y / Math.max(topY, 3), 0, 1);
+      eul.set(ln.z * tk, 0, -ln.x * tk); qT.setFromEuler(eul);
+      m.mesh.quaternion.copy(qT).multiply(qY);
+      if (lean) { qL.setFromAxisAngle(AXX, lean); m.mesh.quaternion.multiply(qL); } // abraçat a l'estructura
+      if (m.placed || (m.t > 0.85 && !m.wait)) ty = Math.max(ty, tmp.y + 1.6 * m.s * m.sy);
+    }
+    topY += (ty - topY) * Math.min(1, dt * 2);
+
+    // Fases
+    if (G.state === 'climb' && !G.desm) {
+      const st = C.steps[G.stepI];
+      const ready = st.enx ? st.mem.every(m => m.placed)
+        : st.mem.every(m => m.placed || (!m.wait && m.dir === 1 && (1 - m.t) * m.dur < 0.7));
+      if (ready) {
+        G.wait += dt;
+        if (st.enx) { G.state = 'aleta'; G.aPhase = 0; G.aMiss = 0; CS.ui.aleta(true); CS.ui.msg("Toca la pantalla quan l'anell es tanqui"); }
+        else if (G.wait > 0.15) { G.wait = 0; G.stepI++; beginStep(G.stepI); }
+      }
+    }
+    if (G.state === 'aleta') {
+      G.aPhase += dt / G.prm.aCycle;
+      if (G.aPhase > 1) { G.aPhase = 0; G.aMiss++; if (G.aMiss % 2 === 0) kick(0.25); }
+    }
+    if (G.state === 'carregat') { G.wait -= dt; if (G.wait <= 0) { CS.ui.hideStamp(); startDescent(); } }
+    if (G.state === 'descend') {
+      const st = G.desc[G.descI];
+      if (!st || st.mem.every(m => !m.mesh.visible)) {
+        G.descI++;
+        if (G.descI >= G.desc.length) {
+          const res = G.aleta ? 'D' : 'id';
+          G.state = 'done'; G.lastRes = res;
+          if (res === 'D') { AU.toc.sortida(); AU.cheer(4.2, 1); pinyaPose('cheer'); CS.ui.stamp('Descarregat!', '#5fbf6a', G.def.fora ? 'castell assolit' : `+${G.def.D.toLocaleString('ca')} punts`); vib([30, 40, 30]); }
+          else { CS.ui.stamp('Intent desmuntat', '#c9bfae', 'sense punts'); AU.murmur(0.4); }
+          const tk = G.token; setTimeout(() => { if (tk === G.token) endRound(res); }, 3000);
+        } else startDescStep();
+      }
+    }
+  }
+  function stepDebris(m, dt) {
+    const d = m.debris; if (d.rest) return;
+    if (d.delay > 0) { d.delay -= dt; return; }
+    const p = m.mesh.position; d.v.y -= 9.8 * 0.8 * dt; p.addScaledVector(d.v, dt);
+    m.mesh.rotation.x += d.w.x * dt; m.mesh.rotation.z += d.w.z * dt;
+    const r = Math.hypot(p.x, p.z), floor = r < C.pinyaR ? 1.1 + (1 - r / C.pinyaR) * 0.25 : 0;
+    if (p.y < floor) {
+      p.y = floor; d.v.multiplyScalar(0.3); d.v.y = Math.abs(d.v.y) * 0.15; d.w.multiplyScalar(0.45);
+      if (r < C.pinyaR) { d.v.x += p.x / (r || 1) * 0.6; d.v.z += p.z / (r || 1) * 0.6; } // rodolen cap enfora de la pinya
+      if (d.v.length() < 0.25) d.rest = true;
+    }
+  }
+
+  // Castell d'exhibició per a la portada
+  function showcase(def, colla) {
+    G.token++; G.state = 'idle'; G.demo = true; G.paused = false; G.lastRes = null;
+    G.def = def; G.prm = D.params(def);
+    build(def, colla);
+    C.all.forEach(m => { m.placed = true; m.t = 1; m.mesh.visible = true; makePath(m); setPose(m, m.pose); });
+    setPose(C.enx, 'aleta'); topY = C.yTop + 1;
+    updatePinya(99, 99);
+    cam.auto = 0.08; AU.murmur(0.3);
+  }
+
+  CS.game = {
+    G, bal, store, save, start, showcase, update, tapAleta, desmuntar, score, notation,
+    get topY() { return topY; }, get castell() { return C; },
+    enxPos: () => (C && C.enx.mesh.visible ? C.enx.mesh.position : null),
+    progress: () => {
+      if (!C) return { done: 0, total: 1, pom: false };
+      const total = C.steps.length; let done = 0;
+      C.steps.forEach(s => { if (s.mem.every(m => m.placed || (m.t >= 1))) done++; });
+      return { done, total };
+    },
+    pause(on) { G.paused = on; if (on) AU.suspend(); else AU.resume(); },
+    active: () => ['pinya', 'climb', 'aleta', 'carregat', 'descend', 'fall', 'done'].includes(G.state)
+  };
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — interfície: HUD, aleta, pantalles, tutorial d'inclinació i ajustos */
+(function (CS) {
+  'use strict';
+  const $ = s => document.querySelector(s);
+  const GM = CS.game, G = GM.G, D = CS.data, TL = CS.tilt, AU = CS.audio, W = CS.world;
+  const store = GM.store;
+  const fmt = n => n.toLocaleString('ca');
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const RESNAME = { D: 'Descarregat', C: 'Carregat', i: 'Intent', id: 'Intent desmuntat' };
+  const RESCOL = { D: '#5fbf6a', C: '#f4c20d', i: '#ff6b6b', id: '#c9bfae' };
+  const show = (sel, on) => $(sel).classList.toggle('hidden', !on);
+  const colla = () => D.COLLES.find(c => c.id === store.colla) || D.COLLES[0];
+  const scr = $('#screen');
+
+  /* ---------- Fletxa 3D de correcció sobre el castell ---------- */
+  const arrowMat = new THREE.MeshBasicMaterial({ color: 0x5fbf6a, depthTest: false, transparent: true, opacity: 0.92 });
+  const arrow = new THREE.Group(); arrow.renderOrder = 10; arrow.visible = false;
+  {
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.85, 10), arrowMat); sh.rotation.x = Math.PI / 2; sh.position.z = 0.15; sh.renderOrder = 10;
+    const hd = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.45, 14), arrowMat); hd.rotation.x = Math.PI / 2; hd.position.z = 0.78; hd.renderOrder = 10;
+    arrow.add(sh, hd); W.scene.add(arrow);
+  }
+
+  /* ---------- HUD ---------- */
+  const dot = $('#gDot'), inp = $('#gIn'), push = $('#gPush'), gauge = $('#gauge');
+  let lastBuzz = 0;
+  function hud(on) { ['#hud', '#gauge', '#pauseBtn', '#status'].forEach(s => show(s, on)); if (!on) { show('#desmBtn', 0); aleta(false); show('#calib', 0); } }
+  function msg(t) { $('#status').textContent = t; }
+  function progress() {
+    const p = GM.progress(); const bar = $('#hProg');
+    if (bar.childElementCount !== p.total) bar.innerHTML = Array.from({ length: p.total }, () => '<i></i>').join('');
+    [...bar.children].forEach((el, i) => el.classList.toggle('on', i < p.done));
+  }
+  function frame(dt) {
+    if (!GM.castell) return;
+    const b = GM.bal, th = W.cam.theta;
+    const fx = -Math.sin(th), fz = -Math.cos(th), rx = Math.cos(th), rz = -Math.sin(th);
+    const sx = b.x * rx + b.z * rz, sy = -(b.x * fx + b.z * fz);
+    const R = 52, l = Math.hypot(b.x, b.z);
+    dot.style.transform = `translate(${(sx * R).toFixed(1)}px,${(sy * R).toFixed(1)}px)`;
+    dot.style.background = l > 0.72 ? '#ff4d4d' : (l > 0.45 ? '#ffa53a' : '#f4c20d');
+    inp.style.transform = `translate(${(TL.out.x * R).toFixed(1)}px,${(-TL.out.y * R).toFixed(1)}px)`;
+    const active = ['climb', 'aleta', 'carregat', 'descend'].includes(G.state);
+    const on = active && l > 0.1;
+    push.style.opacity = on ? 1 : 0;
+    if (on) { const k = Math.min(1, l) * 40 / l; push.setAttribute('x2', (60 - sx * k).toFixed(1)); push.setAttribute('y2', (60 - sy * k).toFixed(1)); }
+    gauge.classList.toggle('warn', active && l > 0.72);
+    if (active && l > 0.78 && G.T - lastBuzz > 0.45 && store.set.vib) { lastBuzz = G.T; try { navigator.vibrate && navigator.vibrate(22); } catch (e) { } }
+    // fletxa sobre la cima
+    arrow.visible = on && G.state !== 'fall';
+    if (arrow.visible) {
+      const top = GM.topY, H = Math.max(top, 3), sw = Math.pow(1, 1.6) * (0.55 + H * 0.03);
+      arrow.position.set(b.x * sw, top + 0.8, b.z * sw); arrow.rotation.y = Math.atan2(-b.x, -b.z);
+      arrow.scale.setScalar(0.6 + Math.min(1, l) * 1.1);
+      arrowMat.color.setHSL(0.33 * (1 - Math.min(1, l)), 0.75, 0.5).convertSRGBToLinear();
+    }
+    // anell de l'aleta al voltant de l'enxaneta
+    if (G.state === 'aleta') {
+      const p = GM.enxPos();
+      if (p) {
+        const v = p.clone(); v.y += 0.45; v.project(W.camera);
+        const x = (v.x * 0.5 + 0.5) * innerWidth, y = (-v.y * 0.5 + 0.5) * innerHeight;
+        const ring = $('#aRing'), tgt = $('#aTarget');
+        ring.style.left = tgt.style.left = x + 'px'; ring.style.top = tgt.style.top = y + 'px';
+        const s = 2.6 - 1.88 * G.aPhase, w = G.prm.aWin * (store.set.relax ? 1.35 : 1);
+        ring.style.transform = `translate(-50%,-50%) scale(${s.toFixed(3)})`;
+        ring.classList.toggle('zone', Math.abs(G.aPhase - 0.85) <= w / 2);
+      }
+    }
+    // calibratge
+    if (G.state === 'pinya') show('#calib', TL.calibrating || G.T < 2.2);
+    else show('#calib', 0);
+  }
+  function aleta(on) { show('#aletaLayer', on); }
+  function desmuntar(on) { show('#desmBtn', on); }
+  let stampT = null;
+  function stamp(t, col, sub) {
+    const s = $('#stamp'); s.style.color = col; s.innerHTML = `${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}`;
+    s.classList.add('show'); clearTimeout(stampT); stampT = setTimeout(hideStamp, 2600);
+  }
+  function hideStamp() { $('#stamp').classList.remove('show'); }
+
+  /* ---------- Pantalles ---------- */
+  function setScreen(html, dim = true) { scr.className = dim ? 'dim' : 'clear'; scr.innerHTML = html; scr.scrollTop = 0; }
+  function bind(sel, fn) { scr.querySelectorAll(sel).forEach(b => b.addEventListener('click', e => { AU.click(); fn(b, e); })); }
+  const swatch = c => `<span class="sw" style="background:${c.stripes ? `repeating-linear-gradient(90deg,${c.color} 0 7px,${c.stripes} 7px 14px)` : c.color}"></span>`;
+
+  function title() {
+    hud(false); releaseWake();
+    GM.showcase(D.byId('3d9f'), colla());
+    document.documentElement.style.setProperty('--colla', colla().color);
+    const done = D.TEMPORADA.filter(t => store.temporada[t.id]).length;
+    setScreen(`<div class="wrap col">
+      <h1 class="title">Castells</h1>
+      <p class="motto">Força, equilibri, valor i seny.</p>
+      <div class="grow"></div>
+      <button class="colla-chip" data-a="colles">${swatch(colla())}<span><small>La teva colla</small>${esc(colla().name)}</span></button>
+      <div class="btns">
+        <button class="b1" data-a="temporada">Temporada<small>${done} de ${D.TEMPORADA.length} castells descarregats</small></button>
+        <button class="b2" data-a="concurs">Diada de concurs<small>Taula de puntuacions 2026</small></button>
+        <button class="b2" data-a="assaig">Assaig lliure</button>
+        <div class="row"><button class="b3" data-a="guia">Guia castellera</button><button class="b3" data-a="ajustos">Ajustos</button></div>
+      </div>
+      ${store.best ? `<p class="note">Millor diada: ${fmt(store.best)} punts</p>` : ''}
+    </div>`, false);
+    bind('[data-a]', async b => {
+      const a = b.dataset.a; AU.init();
+      if (a === 'colles') return colles();
+      if (a === 'guia') return guia();
+      if (a === 'ajustos') return ajustos();
+      const ok = await ensureSensor(); if (!ok) return;
+      if (!store.tutorial) return tutorial(() => go(a));
+      go(a);
+    });
+  }
+  function go(a) {
+    if (a === 'temporada') temporada();
+    else if (a === 'concurs') { G.results = []; G.ronda = 1; picker('concurs'); }
+    else picker('assaig');
+  }
+
+  function colles() {
+    setScreen(`<div class="wrap"><button class="back" data-back>‹ Tornar</button>
+      <div class="panel"><h2>Tria la colla</h2><p class="lead">Les camises identifiquen cada colla. Els tons són aproximats.</p>
+      <div class="colles">${D.COLLES.map(c => `<button class="colla" data-c="${c.id}" aria-pressed="${c.id === store.colla}">${swatch(c)}<b>${esc(c.name)}</b></button>`).join('')}</div></div></div>`);
+    bind('[data-back]', title);
+    bind('[data-c]', b => { store.colla = b.dataset.c; GM.save(); title(); });
+  }
+
+  /* ---------- Sensor i tutorial ---------- */
+  async function ensureSensor() {
+    if (TL.status === 'granted' && TL.hasData) return true;
+    if (TL.status === 'unknown' || TL.status === 'granted') {
+      const st = await TL.request(); // dins del gest de l'usuari (necessari a iOS)
+      if (st === 'granted') { const ok = await TL.waitData(1200); if (ok) return true; }
+    }
+    return new Promise(res => {
+      const W_ = TL.status === 'denied';
+      setScreen(`<div class="wrap"><div class="grow"></div><div class="panel">
+        <h2>${W_ ? 'Sense permís de moviment' : 'No hi ha sensor d\'inclinació'}</h2>
+        <p class="lead">${W_ ? 'El joc es controla inclinant el mòbil. Torna-ho a provar i accepta l\'accés al moviment i l\'orientació. A l\'iPhone, si ja l\'has rebutjat, tanca la pestanya i torna a obrir el joc.'
+          : 'Aquest dispositiu no envia dades d\'inclinació. El joc està pensat per a mòbil. En un ordinador pots provar-lo amb les fletxes del teclat.'}</p>
+        <div class="btns">${W_ ? '<button class="b1" data-retry>Tornar-ho a provar</button>' : '<button class="b1" data-kb>Provar amb el teclat</button>'}<button class="b2" data-back>Tornar</button></div>
+      </div></div>`);
+      bind('[data-retry]', async () => { TL.status = 'unknown'; res(await ensureSensor()); });
+      bind('[data-kb]', () => res(true));
+      bind('[data-back]', () => { title(); res(false); });
+    });
+  }
+
+  let tutRAF = 0;
+  function tutorial(next) {
+    hud(false);
+    let hits = 0, hold = 0, tx = 0, ty = 0, last = performance.now();
+    const place = () => { const a = Math.random() * Math.PI * 2, r = 0.45 + Math.random() * 0.35; tx = Math.cos(a) * r; ty = Math.sin(a) * r; };
+    place(); TL.startCalib(0.6);
+    setScreen(`<div class="wrap"><div class="panel tut">
+      <h2>Inclina el mòbil</h2>
+      <p class="lead">El castell es manté inclinant el telèfon. Primer, agafa'l en una postura còmoda: aquesta serà la posició neutra. Després porta el punt blanc dins de l'anell groc tres vegades.</p>
+      <div class="tutpad" aria-hidden="true"><div class="tgt" id="tTgt"></div><div class="me" id="tMe"></div></div>
+      <p class="lead" id="tTxt" aria-live="polite">0 de 3</p>
+      <label class="sl">Sensibilitat <input type="range" min="7" max="24" step="1" id="tSens" value="${31 - store.set.sens}"><span>més sensible →</span></label>
+      <div class="btns"><button class="b2" data-cal>Recalibrar postura</button><button class="b1" data-ok disabled>Som-hi</button></div>
+    </div></div>`);
+    const me = $('#tMe'), tg = $('#tTgt'), txt = $('#tTxt');
+    $('#tSens').addEventListener('input', e => { store.set.sens = 31 - +e.target.value; TL.sens = store.set.sens; GM.save(); });
+    bind('[data-cal]', () => TL.startCalib(0.6));
+    bind('[data-ok]', () => { cancelAnimationFrame(tutRAF); store.tutorial = true; GM.save(); next(); });
+    (function loop(now) {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      if (!document.body.contains(me)) return;
+      const R = 110, x = TL.out.x, y = TL.out.y;
+      me.style.transform = `translate(${x * R}px,${-y * R}px)`;
+      tg.style.transform = `translate(${tx * R}px,${-ty * R}px)`;
+      const inside = Math.hypot(x - tx, y - ty) < 0.16;
+      tg.classList.toggle('in', inside);
+      if (inside && hits < 3) { hold += dt; if (hold > 0.7) { hits++; hold = 0; AU.click(); txt.textContent = `${hits} de 3`; if (hits < 3) place(); else { txt.textContent = 'Perfecte. Ja ho domines.'; scr.querySelector('[data-ok]').disabled = false; } } }
+      else hold = 0;
+      tutRAF = requestAnimationFrame(loop);
+    })(last);
+  }
+
+  /* ---------- Temporada ---------- */
+  function temporada() {
+    let open = true;
+    const rows = D.TEMPORADA.map((t, i) => {
+      const c = D.byId(t.id), st = store.temporada[t.id] || 0, can = open;
+      if (!st) open = false;
+      return `<button class="ms ${st ? 'ok' : ''}" data-id="${t.id}" ${can ? '' : 'disabled'}>
+        <span class="n">${i + 1}</span><span class="t"><b>${esc(t.t)}</b><small>${esc(c.name)}</small></span>
+        <span class="st" aria-label="${st} estrelles">${can ? stars(st) : '🔒'}</span></button>`;
+    }).join('');
+    setScreen(`<div class="wrap"><button class="back" data-back>‹ Tornar</button><div class="panel">
+      <h2>Temporada</h2><p class="lead">De l'assaig de dijous a la cima de deu pisos. Cada castell descarregat obre el següent i la dificultat creix pas a pas.</p>
+      <div class="mlist">${rows}</div></div></div>`);
+    bind('[data-back]', title);
+    bind('[data-id]', b => play(D.byId(b.dataset.id), 'temporada'));
+    const nxt = scr.querySelector('.ms:not(.ok):not([disabled])'); nxt && nxt.scrollIntoView({ block: 'center' });
+  }
+  const stars = n => [1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}">★</i>`).join('');
+  const diff = d => { const n = Math.max(1, Math.min(5, Math.round(d * 4) + 1)); return `<span class="diff" aria-label="dificultat ${n} de 5">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`; };
+
+  /* ---------- Selector de castells ---------- */
+  function picker(mode) {
+    const desc = new Set(G.results.filter(r => r.res === 'D').map(r => r.id));
+    const list = D.CASTELLS.filter(c => mode !== 'concurs' || !c.fora);
+    const groups = [['De 4 a 7 pisos', c => c.pisos <= 7], ['De 8 pisos', c => c.pisos === 8], ['De 9 pisos', c => c.pisos === 9], ['De 10 pisos', c => c.pisos === 10]];
+    const sc = GM.score(G.results).total;
+    const head = mode === 'concurs'
+      ? `<h2>Ronda ${G.ronda}</h2><p class="lead">Fins a 5 rondes. Puntuen els tres millors castells d'estructura diferent i, com a màxim, dos només carregats. Un castell descarregat no es pot repetir. Punts: <b>${fmt(sc)}</b></p>`
+      : `<h2>Assaig lliure</h2><p class="lead">Qualsevol castell, sense pressió. Punts de la taula 2026 (carregat / descarregat).</p>`;
+    setScreen(`<div class="wrap"><button class="back" data-back>‹ ${mode === 'concurs' && G.results.length ? 'Acabar la diada' : 'Tornar'}</button><div class="panel">${head}
+      ${groups.map(([t, f]) => { const cs = list.filter(f); return cs.length ? `<h3>${t}</h3><div class="glist">${cs.map(c => `
+        <button class="cs" data-id="${c.id}" ${mode === 'concurs' && desc.has(c.id) ? 'disabled' : ''}>
+          <span class="nm">${esc(c.name)}</span><span class="cd">${c.id}</span>
+          <span class="pt">${c.fora ? 'Iniciació, fora de taula' : `C ${fmt(c.C)} / D ${fmt(c.D)}`}</span>${diff(c.d)}
+        </button>`).join('')}</div>` : ''; }).join('')}
+    </div></div>`);
+    bind('[data-back]', () => (mode === 'concurs' && G.results.length ? summary() : title()));
+    bind('[data-id]', b => play(D.byId(b.dataset.id), mode));
+  }
+
+  function play(def, mode) {
+    AU.init(); immersive(); wake();
+    G.mode = mode; scr.innerHTML = ''; scr.className = '';
+    GM.start(def, colla(), mode);
+  }
+  function onStart() {
+    hud(true); hideStamp(); desmuntar(false); aleta(false);
+    document.documentElement.style.setProperty('--colla', colla().color);
+    $('#hCastell').textContent = G.def.name;
+    $('#hSub').textContent = G.mode === 'concurs' ? `Ronda ${G.ronda} · ${colla().name}` : G.mode === 'temporada' ? `Temporada · ${colla().name}` : `Assaig · ${colla().name}`;
+    $('#hPts').textContent = G.mode === 'concurs' ? fmt(GM.score(G.results).total) : (G.def.fora ? '' : fmt(G.def.D));
+    $('#kbNote').classList.toggle('hidden', TL.hasData);
+    msg('Fent pinya…'); $('#hProg').innerHTML = ''; progress();
+    requestAnimationFrame(() => { const h = $('#hud').getBoundingClientRect().bottom; $('#gauge').style.top = (h + 12) + 'px'; $('#kbNote').style.top = (h + 156) + 'px'; });
+  }
+
+  function roundEnd(r) {
+    hud(false); releaseWake();
+    const d = G.def, nameRes = `<div class="res" style="color:${RESCOL[r.res]}">${RESNAME[r.res]}</div>`;
+    const stat = `<p class="lead">Notació <b>${GM.notation(r)}</b>. Inclinació màxima ${Math.round(Math.min(1, r.maxLean) * 100)}%${r.perfect ? ', aleta perfecta' : ''}.</p>`;
+    if (G.mode === 'concurs') {
+      const sc = GM.score(G.results), ok = G.results.filter(x => x.res === 'D' || x.res === 'C');
+      const end = G.ronda >= 5 || (sc.chosen.length >= 3 && new Set(ok.map(x => x.id)).size >= 3 && G.ronda >= 3);
+      setScreen(`<div class="wrap"><div class="grow"></div><div class="panel">
+        <p class="dim-t">Ronda ${G.ronda}: ${esc(d.name)}</p>${nameRes}${stat}
+        <table class="sum">${G.results.map((x, i) => `<tr><td>Ronda ${i + 1}: ${GM.notation(x)}</td><td style="color:${RESCOL[x.res]}">${RESNAME[x.res]}</td></tr>`).join('')}
+        <tr><td>Total provisional</td><td>${fmt(sc.total)}</td></tr></table>
+        <div class="btns">${end ? '<button class="b1" data-sum>Veure la classificació</button>' : '<button class="b1" data-next>Següent ronda</button><button class="b2" data-sum>Acabar la diada</button>'}</div>
+      </div></div>`);
+      bind('[data-next]', () => { G.ronda++; picker('concurs'); });
+      bind('[data-sum]', summary);
+      return;
+    }
+    if (G.mode === 'temporada') {
+      const idx = D.TEMPORADA.findIndex(t => t.id === d.id), nx = D.TEMPORADA[idx + 1];
+      const unlocked = r.res === 'D' && nx;
+      setScreen(`<div class="wrap"><div class="grow"></div><div class="panel">
+        <p class="dim-t">${esc(D.TEMPORADA[idx].t)}: ${esc(d.name)}</p>${nameRes}
+        ${r.res === 'D' ? `<div class="bigstars">${stars(r.stars)}</div>` : `<p class="lead">${r.res === 'C' ? "Has coronat, però per obrir el següent castell cal descarregar-lo." : 'Per avançar cal descarregar el castell.'}</p>`}
+        ${stat}${r.res === 'D' && r.stars < 3 ? `<p class="note">${r.stars === 1 ? 'Mantén la inclinació per sota del 72% per guanyar la segona estrella.' : "Tercera estrella: aleta perfecta i inclinació per sota del 55%."}</p>` : ''}
+        <div class="btns">${unlocked ? `<button class="b1" data-nx>Següent: ${esc(D.byId(nx.id).name)}</button>` : ''}
+          <button class="${unlocked ? 'b2' : 'b1'}" data-rep>Tornar-ho a provar</button><button class="b2" data-tmp>Temporada</button></div>
+      </div></div>`);
+      bind('[data-nx]', () => play(D.byId(nx.id), 'temporada'));
+      bind('[data-rep]', () => play(d, 'temporada'));
+      bind('[data-tmp]', () => { title(); temporada(); });
+      return;
+    }
+    setScreen(`<div class="wrap"><div class="grow"></div><div class="panel">
+      <p class="dim-t">${esc(d.name)}</p>${nameRes}${stat}
+      <div class="btns"><button class="b1" data-rep>Tornar-ho a provar</button><button class="b2" data-oth>Un altre castell</button><button class="b2" data-menu>Menú</button></div>
+    </div></div>`);
+    bind('[data-rep]', () => play(d, 'assaig'));
+    bind('[data-oth]', () => picker('assaig'));
+    bind('[data-menu]', title);
+  }
+
+  function summary() {
+    hud(false); releaseWake();
+    const sc = GM.score(G.results), rec = sc.total > (store.best || 0);
+    if (rec) { store.best = sc.total; GM.save(); }
+    setScreen(`<div class="wrap"><div class="grow"></div><div class="panel">
+      <p class="dim-t">${esc(colla().name)}</p><h2>Actuació</h2>
+      <p class="lead big">${G.results.map(GM.notation).join(', ') || 'Sense castells'}</p>
+      <table class="sum">${sc.chosen.map(v => `<tr><td>${esc(D.byId(v.id).name)} (${RESNAME[v.res].toLowerCase()})</td><td>${fmt(v.pts)}</td></tr>`).join('')}
+      <tr><td><b>Total</b></td><td class="tot">${fmt(sc.total)}</td></tr></table>
+      ${rec && sc.total > 0 ? '<p class="note gold">Nova millor diada.</p>' : ''}
+      <div class="btns"><button class="b1" data-new>Nova diada</button><button class="b2" data-menu>Menú</button></div>
+    </div></div>`);
+    bind('[data-new]', () => { G.results = []; G.ronda = 1; picker('concurs'); });
+    bind('[data-menu]', title);
+  }
+
+  /* ---------- Pausa ---------- */
+  function pause() {
+    if (!GM.active() || G.paused) return;
+    GM.pause(true);
+    show('#pauseLayer', 1);
+  }
+  function resume() { show('#pauseLayer', 0); GM.pause(false); }
+  $('#pauseBtn').addEventListener('click', () => { AU.click(); pause(); });
+  $('#pContinue').addEventListener('click', resume);
+  $('#pCalib').addEventListener('click', () => { TL.startCalib(0.8); $('#pCalib').textContent = 'Calibrat'; setTimeout(() => ($('#pCalib').textContent = 'Recalibrar postura'), 1200); });
+  $('#pQuit').addEventListener('click', () => { show('#pauseLayer', 0); GM.pause(false); AU.toc.stop(); title(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  $('#desmBtn').addEventListener('click', () => { AU.click(); GM.desmuntar(); });
+  $('#aletaLayer').addEventListener('pointerdown', e => { e.preventDefault(); GM.tapAleta(); });
+  addEventListener('keydown', e => { if (e.code === 'Space' && G.state === 'aleta') { e.preventDefault(); GM.tapAleta(); } if (e.code === 'Escape') pause(); });
+
+  /* ---------- Ajustos ---------- */
+  function ajustos() {
+    const s = store.set;
+    const tog = (k, a, b, v) => `<div class="toggle" data-k="${k}"><button data-v="1" aria-pressed="${!!v}">${a}</button><button data-v="0" aria-pressed="${!v}">${b}</button></div>`;
+    setScreen(`<div class="wrap"><button class="back" data-back>‹ Tornar</button><div class="panel">
+      <h2>Ajustos</h2>
+      <h3>Control</h3>
+      <label class="sl">Sensibilitat <input type="range" min="7" max="24" step="1" id="sSens" value="${31 - s.sens}"><span>${s.sens}° per a força màxima</span></label>
+      <p class="lead small">Direcció de la inclinació</p>${tog('invert', 'Invertida', 'Normal', s.invert)}
+      <p class="lead small">Mode relaxat: castells més dòcils i aleta més ampla</p>${tog('relax', 'Activat', 'Desactivat', s.relax)}
+      <div class="btns"><button class="b2" data-tut>Practicar la inclinació</button></div>
+      <h3>So</h3>
+      <label class="sl">Gralles i timbal <input type="range" min="0" max="1" step="0.05" id="sMus" value="${s.music}"></label>
+      <label class="sl">Plaça i efectes <input type="range" min="0" max="1" step="0.05" id="sSfx" value="${s.sfx}"></label>
+      <p class="lead small">Vibració</p>${tog('vib', 'Sí', 'No', s.vib)}
+      <h3>Gràfics</h3>${tog('quality', 'Alta qualitat', 'Bateria', s.quality === 'alta')}
+      <h3>Progrés</h3>
+      <div class="btns"><button class="b2 danger" data-reset>Esborrar el progrés de la temporada</button></div>
+    </div></div>`);
+    bind('[data-back]', title);
+    bind('[data-tut]', async () => { if (await ensureSensor()) tutorial(ajustos); });
+    $('#sSens').addEventListener('input', e => { s.sens = 31 - +e.target.value; TL.sens = s.sens; e.target.nextElementSibling.textContent = `${s.sens}° per a força màxima`; GM.save(); });
+    $('#sMus').addEventListener('input', e => { s.music = +e.target.value; AU.setVolumes(s.music, s.sfx); GM.save(); });
+    $('#sSfx').addEventListener('input', e => { s.sfx = +e.target.value; AU.setVolumes(s.music, s.sfx); GM.save(); });
+    scr.querySelectorAll('.toggle').forEach(t => t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      const k = t.dataset.k, v = b.dataset.v === '1';
+      if (k === 'quality') { s.quality = v ? 'alta' : 'baixa'; W.setQuality(s.quality); } else s[k] = v;
+      if (k === 'invert') TL.invert = v;
+      GM.save(); AU.click(); ajustos();
+    })));
+    bind('[data-reset]', b => { if (b.dataset.sure) { store.temporada = {}; store.best = 0; GM.save(); ajustos(); } else { b.dataset.sure = 1; b.textContent = 'Toca un altre cop per confirmar'; } });
+  }
+
+  function guia() {
+    setScreen(`<div class="wrap"><button class="back" data-back>‹ Tornar</button><div class="panel guide">
+    <h2>Guia castellera</h2>
+    <p>Un castell es nomena pel nombre de persones per pis i pel total de pisos. Un <b>3 de 9</b> té tres castellers a cada pis del tronc i nou pisos comptant el pom de dalt.</p>
+    <h3>Parts del castell</h3>
+    <ul>
+      <li><b>Pinya</b>: la base a terra. Aguanta, corregeix desequilibris i esmorteeix les caigudes.</li>
+      <li><b>Folre</b>: segona pinya damunt de la primera, que envolta els segons i subjecta els terços.</li>
+      <li><b>Manilles</b>: tercera pinya, sobre el folre, que subjecta els quarts. Els <b>puntals</b> van un pis més amunt, al pilar de 9.</li>
+      <li><b>Tronc</b>: baixos, segons, terços, quarts… Com més amunt, gent més lleugera.</li>
+      <li><b>Pom de dalt</b>: la canalla amb casc. Dosos, acotxador i enxaneta.</li>
+    </ul>
+    <h3>Resultats</h3>
+    <ul>
+      <li><b>Carregat</b>: l'enxaneta corona i fa l'aleta, alçant la mà.</li>
+      <li><b>Descarregat</b>: a més, tothom baixa ordenadament.</li>
+      <li><b>Intent</b>: cau abans de l'aleta. <b>Intent desmuntat</b>: es desfà amb ordre abans de coronar.</li>
+    </ul>
+    <h3>Notació</h3>
+    <p><b>f</b> folre, <b>m</b> manilles, <b>p</b> puntals, <b>a</b> agulla, <b>sf</b> sense folre, <b>sm</b> sense manilles. <b>P</b> és pilar i <b>2</b> torre. Prefix <b>i</b> per a intent i <b>id</b> per a intent desmuntat; sufix <b>C</b> per a carregat.</p>
+    <h3>El toc de castells</h3>
+    <p>Gralles i timbals guien la colla, perquè la pinya i els baixos no veuen la cima. Comença quan pugen els terços, fa un trino quan l'enxaneta s'encavalca, toca l'aleta en coronar, baixa amb tres notes descendents mentre es desmunta el pom i acaba amb la sortida. Si el castell cau, les gralles callen.</p>
+    <h3>Concurs de Castells</h3>
+    <p>Biennal, a la Tarraco Arena de Tarragona, el primer cap de setmana d'octubre. La classificació suma els tres millors castells d'estructura diferent; amb la normativa del 2026 només compten, com a màxim, dos castells carregats.</p>
+    <h3>Com es juga</h3>
+    <p>Inclina el mòbil cap on indica la fletxa verda per mantenir el punt groc dins de l'anell vermell. El punt blanc és la teva inclinació. Quan l'enxaneta arriba dalt, toca la pantalla quan l'anell es tanqui sobre ella. Després, aguanta fins que tothom hagi baixat. Pots arrossegar l'escena per girar la càmera i, si veus que no surt, desmuntar a temps.</p>
+    </div></div>`);
+    bind('[data-back]', title);
+  }
+
+  /* ---------- Pantalla completa, orientació i pantalla encesa ---------- */
+  function immersive() {
+    if (!W.mobile || matchMedia('(display-mode: standalone)').matches) return;
+    const el = document.documentElement;
+    try { if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('portrait').catch(() => { })).catch(() => { }); } catch (e) { }
+  }
+  let wl = null;
+  async function wake() { try { if ('wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => (wl = null)); } } catch (e) { wl = null; } }
+  function releaseWake() { try { wl && wl.release(); } catch (e) { } wl = null; }
+
+  CS.ui = { title, frame, msg, progress, aleta, desmuntar, stamp, hideStamp, onStart, roundEnd };
+})(window.CS = window.CS || {});
+
+</script>
+<script>
+/* Castells 3D — arrencada i bucle principal */
+(function (CS) {
+  'use strict';
+  const W = CS.world, GM = CS.game, TL = CS.tilt, AU = CS.audio, UI = CS.ui;
+  const s = GM.store.set;
+  TL.sens = s.sens; TL.invert = s.invert;
+  AU.setVolumes(s.music, s.sfx);
+  W.setQuality(s.quality);
+  W.resize();
+
+  // Qualitat adaptativa: si el mòbil no arriba a ~40 fps, baixa la resolució
+  let fpsT = 0, fpsN = 0, pr = W.renderer.getPixelRatio();
+  function adapt(dt) {
+    fpsT += dt; fpsN++;
+    if (fpsT > 2.5) {
+      const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
+      if (fps < 40 && pr > 1) { pr = Math.max(1, pr - 0.25); W.renderer.setPixelRatio(pr); W.resize(); }
+    }
+  }
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    TL.update(dt);
+    GM.update(dt);
+    UI.frame(dt);
+    W.updateCamera(dt * (GM.G.paused ? 0 : 1), GM.topY);
+    W.renderer.render(W.scene, W.camera);
+    adapt(dt);
+    requestAnimationFrame(loop);
+  }
+
+
+  UI.title();
+  requestAnimationFrame(loop);
+})(window.CS = window.CS || {});
+
+</script>
+</body>
+</html>
