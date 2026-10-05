@@ -4,7 +4,7 @@ Joc web de castellers.
 
 ## Contingut
 
-* 39 castells de la taula de puntuacions del Concurs de Castells 2026 (carregats / descarregats).
+* 39 castells de la taula de puntuacions (carregats / descarregats).
 * Estructura generada: pinya, folre, manilles, puntals, agulla, tronc i pom de dalt (dosos, acotxador i enxaneta).
 * Modes de joc:
 
